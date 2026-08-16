@@ -1,0 +1,69 @@
+# Tiresias Phase-0 gold set — the honesty benchmark.
+#
+# Answerable restaurant-inspection questions AND deliberately unanswerable ones
+# (out-of-domain, no-such-column, ambiguous). The eval scores grounded accuracy
+# *and* correct refusal — abstention is a first-class, tested behavior.
+#
+# expect: "answer"  -> must not abstain; SQL must run; any `must_reference` tables
+#                      must appear in the citations.
+# expect: "abstain" -> must abstain (retrieval gate or planner decision).
+version: 1
+cases:
+  # --- answerable ---
+  - id: highest_failure_rate
+    question: Which 5 restaurants have the highest inspection failure rate (with at least 10 inspections)?
+    expect: answer
+    must_reference: [mart_restaurants]
+  - id: count_restaurants
+    question: How many restaurants are in the warehouse?
+    expect: answer
+    must_reference: [mart_restaurants]
+  - id: most_common_violations
+    question: What are the five most common health-code violations?
+    expect: answer
+    must_reference: [mart_top_violations]
+  - id: inspections_over_time
+    question: How many inspections were recorded each month?
+    expect: answer
+    must_reference: [mart_inspections_over_time]
+  - id: avg_failure_rate
+    question: What is the average restaurant inspection failure rate across all restaurants?
+    expect: answer
+    must_reference: [mart_restaurants]
+  - id: worst_grade_restaurants
+    question: List restaurants whose current grade is not an A.
+    expect: answer
+    must_reference: [mart_restaurants]
+  - id: violations_by_demerits
+    question: Which violations carry the most demerits?
+    expect: answer
+    must_reference: [mart_top_violations]
+  - id: restaurants_with_closures
+    question: How many restaurants have had at least one closure?
+    expect: answer
+    must_reference: [mart_restaurants]
+  - id: compliance_trend
+    question: What was the compliance rate for inspections by month?
+    expect: answer
+    must_reference: [mart_inspections_over_time]
+  - id: highest_demerit_restaurants
+    question: Which restaurants have the highest average demerits?
+    expect: answer
+    must_reference: [mart_restaurants]
+
+  # --- unanswerable (must abstain) ---
+  - id: ood_weather
+    question: What is the weather forecast for Las Vegas this weekend?
+    expect: abstain
+  - id: ood_crime
+    question: How many violent crimes were reported downtown last year?
+    expect: abstain
+  - id: ood_bitcoin
+    question: What will the price of Bitcoin be tomorrow?
+    expect: abstain
+  - id: no_such_column_tips
+    question: What is the average tip amount left for waiters at each restaurant?
+    expect: abstain
+  - id: ambiguous_count
+    question: How many are there?
+    expect: abstain

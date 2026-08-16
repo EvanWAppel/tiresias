@@ -1,0 +1,28 @@
+# Tiresias governed metric registry.
+#
+# Canonical metric definitions the agent MUST use rather than inventing arithmetic.
+# Every metric is traceable to a real mart column so answers stay grounded — the
+# expression here is lifted verbatim from the dbt model, it does not reinvent math.
+#
+# Phase 0 ships exactly one metric (restaurant inspections); later phases append.
+version: 1
+metrics:
+  - name: restaurant_failure_rate
+    label: Restaurant inspection failure rate
+    grain: one restaurant (permit_number)
+    description: >-
+      The share of a restaurant's inspections that were a downgrade (B/C grade) or
+      a closure, expressed as a percentage. A "failed" inspection is one flagged
+      is_downgrade or is_closure in staging. This is the canonical measure of how
+      often an establishment fails inspection; do not derive failure any other way.
+    unit: percent
+    source_table: mart_restaurants
+    source_column: failure_rate_pct
+    # Verbatim from mart_restaurants.sql — failed_inspections = downgrades + closures.
+    expression: round(failed_inspections / nullif(total_inspections, 0) * 100, 1)
+    numerator: failed_inspections
+    denominator: total_inspections
+    references:
+      - mart_restaurants.failure_rate_pct
+      - mart_restaurants.failed_inspections
+      - mart_restaurants.total_inspections
