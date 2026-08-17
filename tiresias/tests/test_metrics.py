@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from tiresias.catalog import Catalog
 from tiresias.metrics import Metric, MetricRegistry, get_metric
 
 
@@ -33,3 +34,22 @@ def test_get_metric_convenience_matches_registry(registry: MetricRegistry) -> No
 def test_unknown_metric_raises_with_known_names(registry: MetricRegistry) -> None:
     with pytest.raises(KeyError, match="restaurant_failure_rate"):
         registry.get("no_such_metric")
+
+
+def test_every_metric_is_grounded_in_the_catalog(
+    registry: MetricRegistry, catalog: Catalog
+) -> None:
+    """The semantic layer must trace to real columns — a metric that references a
+    column the catalog doesn't have is a broken governed definition."""
+    for metric in registry.metrics:
+        table = catalog.get(metric.source_table)  # raises if the table is unknown
+        assert metric.source_column in table.column_names, (
+            f"{metric.name}: source_column {metric.source_column!r} "
+            f"not in {metric.source_table}"
+        )
+        for ref in metric.references:
+            ref_table, _, ref_column = ref.partition(".")
+            assert ref_column in catalog.get(ref_table).column_names, (
+                f"{metric.name}: reference {ref!r} does not resolve in the catalog"
+            )
+

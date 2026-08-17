@@ -150,10 +150,13 @@ Phase-0 domain (restaurant marts), expand outward.
       permits, fire, tourism, weather, air quality, marriage, lake mead, parks, etc.).
 
 ### P1.2 — Full metric registry
-- [ ] Expand `tiresias/metrics.yml` beyond `restaurant_failure_rate` with the other
-      canonical restaurant metrics (compliance rate, avg demerits, violation frequency),
-      each grounded in a real mart column. Add a registry-integrity test: every metric's
-      `source_table.source_column` must exist in the catalog.
+- [x] Expanded `tiresias/metrics.yml` to 4 governed metrics: `restaurant_failure_rate`,
+      `restaurant_compliance_rate`, `restaurant_avg_demerits`, `top_violation_frequency`
+      — each grounded in a real mart column (arithmetic verbatim from the marts). New
+      metrics flow automatically into the MCP metric resource, retrieval corpus, and
+      agent grounding. Added a **registry-integrity test**: every metric's
+      `source_table.source_column` and every `references` entry must resolve in the
+      catalog (44 tests green).
 - [ ] (Stretch, per PRD Open decision #2) evaluate MetricFlow / dbt Semantic Layer.
 
 ### P1.3 — Snowflake dual-target (folds in RECRUITER-PRIMER P3)
