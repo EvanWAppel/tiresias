@@ -132,6 +132,38 @@ RAG, LangGraph, and an eval harness — in miniature but real, deployed, and lin
       rotated/killed independently. This is the ceiling nothing client-side can bypass.
 - [ ] Optional: edge IP rate-limiting (Cloudflare/Railway) if bot traffic appears.
 
+---
+
+## Phase 1 — harden Elvis to production dbt + metric registry + Snowflake dual-target
+
+Each of the three workstreams below is independently claimable. Start with the
+Phase-0 domain (restaurant marts), expand outward.
+
+### P1.1 — dbt contracts + tests + docs (restaurant domain first)
+- [x] **Contracts enforced** on the 4 restaurant marts (`mart_restaurants`,
+      `mart_inspections_over_time`, `mart_inspection_violations`, `mart_top_violations`)
+      — every column declared with its exact `data_type` (incl. `hugeint`/`timestamp`),
+      `contract: enforced: true`. Full column **docs** on all 4. Key **tests**
+      (not_null/unique). `dbt build` green (PASS=14, WARN=0, ERROR=0); Tiresias's
+      grounding gets the richer descriptions for free (43 tests still green).
+- [ ] Expand contracts + tests + docs outward to the remaining ~26 marts (crime,
+      permits, fire, tourism, weather, air quality, marriage, lake mead, parks, etc.).
+
+### P1.2 — Full metric registry
+- [ ] Expand `tiresias/metrics.yml` beyond `restaurant_failure_rate` with the other
+      canonical restaurant metrics (compliance rate, avg demerits, violation frequency),
+      each grounded in a real mart column. Add a registry-integrity test: every metric's
+      `source_table.source_column` must exist in the catalog.
+- [ ] (Stretch, per PRD Open decision #2) evaluate MetricFlow / dbt Semantic Layer.
+
+### P1.3 — Snowflake dual-target (folds in RECRUITER-PRIMER P3)
+- [ ] Add a `snow` target to `profiles.yml`; guard DuckDB-specific SQL with
+      `{{ target.type }}` / macros; `dbt parse --target snow` succeeds.
+- [ ] Write `docs/SNOWFLAKE.md`. Keep `dev`/DuckDB the default.
+
+**Acceptance:** clean dbt project, green CI, browsable metric catalog; `dbt parse
+--target snow` succeeds and DuckDB-specific SQL is guarded/documented.
+
 ## Deferred to later phases (not Phase 0)
 - CI eval-regression gate + restaurant-mart seeds/contracts → Phase 1/Phase 4 (PRD).
   (CI is untouched in Phase 0; the tiresias tests need the warehouse, which CI lacks
