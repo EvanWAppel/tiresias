@@ -104,11 +104,33 @@ to the mart column `failure_rate_pct`, it does not reinvent the arithmetic.
 ### P0.8 — Ship
 - [x] Deploy-prep: mirrored new deps into `requirements.txt` (Railway pip path);
       Dockerfile now runs `dbt docs generate` so `catalog.json` exists at runtime.
-- [ ] Set `ANTHROPIC_API_KEY` as a Railway service variable (reaches runtime). *(needs Evan)*
-- [ ] Deploy via existing Railway/Docker path; confirm the page is public & linkable.
-      *(outward action — needs Evan's say-so)*
-- [x] **Acceptance (local):** live cited answers for restaurant questions ✓; clean
-      abstention for out-of-domain ✓; `-m eval` 15/15 ✓. Remaining: deploy + public link.
+- [x] `ANTHROPIC_API_KEY` set as a Railway service variable (confirmed live — the page
+      loads the agent, no missing-key notice).
+- [x] Deployed via Railway (`railway up`); merged to main. Page public at
+      `elvis-production-e07a.up.railway.app` → "🔮 Ask Tiresias".
+- [x] **Acceptance (LIVE, verified in browser):** restaurant question →
+      cited SQL-backed answer over real data (top-5 failure rates w/ the governed
+      metric) ✓; out-of-domain (crime) → clean abstention, no SQL, no guess ✓.
+      Landing page healthy (Business Licenses KPI now shows Henderson count) ✓.
+      Local `-m eval` 15/15 ✓.
+
+**✅ PHASE 0 SHIPPED.** A stranger can ask a restaurant-inspection question and get a
+cited, SQL-backed answer live; out-of-domain yields a clean abstention. MCP authoring,
+RAG, LangGraph, and an eval harness — in miniature but real, deployed, and linkable.
+
+## P0.9 — Abuse hardening (public endpoint)
+- SQL boundary audited against 17 hostile inputs — all blocked: file reads
+  (`read_text('/proc/self/environ')`, `read_csv`, `glob`, `read_blob`), metadata
+  (`duckdb_settings()`, `pragma_table_info`, `information_schema`), alias-spoof of a
+  file-read fn as an allowed table, UNION-to-function, multi-statement, ATTACH/DDL/DML.
+  The read-only connection + SELECT-only + table allowlist + EXPLAIN + row cap hold.
+- [x] App-side guards in `views/tiresias.py`: input-length cap, per-session cap, and a
+      process-wide daily circuit breaker (all env-overridable: `TIRESIAS_MAX_*`).
+      Safe error handling (no tracebacks leak to the public UI).
+- [ ] **Hard backstop (Evan, Anthropic Console):** set a workspace **spend limit +
+      budget alert**, and use a **dedicated, scoped API key** for this app so it can be
+      rotated/killed independently. This is the ceiling nothing client-side can bypass.
+- [ ] Optional: edge IP rate-limiting (Cloudflare/Railway) if bot traffic appears.
 
 ## Deferred to later phases (not Phase 0)
 - CI eval-regression gate + restaurant-mart seeds/contracts → Phase 1/Phase 4 (PRD).
