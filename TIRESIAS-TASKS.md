@@ -189,8 +189,11 @@ Phase-0 domain (restaurant marts), expand outward.
       with real fastembed. A retrieval regression now turns red deterministically.
 
 ### P2.3 — Deepen the MCP tool surface
-- [ ] Add `list_tables`, `profile_column`, `get_metric` tools alongside
-      `run_validated_sql` (full Phase-2 surface); tests over the client.
+- [x] Added `list_tables`, `profile_column`, `get_metric` tools alongside
+      `run_validated_sql` (core in `tools.py`, wrappers in `mcp_server.py`). Generic
+      `WarehouseSession.call_tool`. 4 new end-to-end MCP tests (list, profile,
+      metric lookup, structured errors). `profile_column` builds a fixed-shape
+      aggregate from catalog-validated identifiers (not agent SQL). 48 tests green.
 
 ### P2.4 — Prove the server from Claude Code (manual)
 - [ ] Screencast: Claude Code querying the warehouse through the Tiresias MCP server
