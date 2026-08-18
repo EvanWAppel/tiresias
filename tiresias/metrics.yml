@@ -26,3 +26,50 @@ metrics:
       - mart_restaurants.failure_rate_pct
       - mart_restaurants.failed_inspections
       - mart_restaurants.total_inspections
+
+  - name: restaurant_compliance_rate
+    label: Restaurant inspection compliance rate
+    grain: one restaurant (permit_number)
+    description: >-
+      The share of a restaurant's inspections marked compliant (a passing / "A"
+      result), as a percentage — the mirror of restaurant_failure_rate. Use this
+      canonical column; do not recompute compliance any other way.
+    unit: percent
+    source_table: mart_restaurants
+    source_column: compliance_rate_pct
+    # Verbatim from mart_restaurants.sql.
+    expression: round(compliant_count / nullif(total_inspections, 0) * 100, 1)
+    numerator: compliant_count
+    denominator: total_inspections
+    references:
+      - mart_restaurants.compliance_rate_pct
+      - mart_restaurants.compliant_count
+      - mart_restaurants.total_inspections
+
+  - name: restaurant_avg_demerits
+    label: Restaurant average demerits
+    grain: one restaurant (permit_number)
+    description: >-
+      The mean number of demerits a restaurant receives per inspection across its
+      inspection history (null when it has no inspections). Higher is worse. Read
+      it from the canonical avg_demerits column.
+    unit: demerits
+    source_table: mart_restaurants
+    source_column: avg_demerits
+    expression: round(avg(inspection_demerits), 1)
+    references:
+      - mart_restaurants.avg_demerits
+
+  - name: top_violation_frequency
+    label: Violation citation frequency
+    grain: one violation code (by inspection type and grade)
+    description: >-
+      How many times a specific health-code violation was cited, used to rank the
+      most common violations. Higher means more frequently cited.
+    unit: count
+    source_table: mart_top_violations
+    source_column: occurrence_count
+    expression: count(*)
+    references:
+      - mart_top_violations.occurrence_count
+      - mart_top_violations.violation_code
