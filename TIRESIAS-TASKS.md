@@ -146,8 +146,12 @@ Phase-0 domain (restaurant marts), expand outward.
       `contract: enforced: true`. Full column **docs** on all 4. Key **tests**
       (not_null/unique). `dbt build` green (PASS=14, WARN=0, ERROR=0); Tiresias's
       grounding gets the richer descriptions for free (43 tests still green).
-- [ ] Expand contracts + tests + docs outward to the remaining ~26 marts (crime,
-      permits, fire, tourism, weather, air quality, marriage, lake mead, parks, etc.).
+- [x] Expanded **contracts** to all 28 enabled marts — every column declared at its
+      exact warehouse `data_type`, `contract: enforced: true`. Existing tests + docs
+      preserved. `dbt build` green (PASS=99, WARN=0, ERROR=0). *(Per-column doc
+      enrichment for the previously-undocumented non-restaurant columns is a separate,
+      lower-priority content pass; contracts now cover 100% of columns, docs remain
+      partial for non-Tiresias marts.)*
 
 ### P1.2 — Full metric registry
 - [x] Expanded `tiresias/metrics.yml` to 4 governed metrics: `restaurant_failure_rate`,
