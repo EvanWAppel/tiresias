@@ -1,0 +1,25 @@
+# Retrieval-quality gold set — does hybrid retrieval fetch the right grounding?
+#
+# For each query, at least one of `expect_any` (a table or metric ref) must appear
+# among the top-k retrieved docs. Scored as recall@k. This exercises the RAG layer
+# on its own — no LLM — so a retrieval regression is caught deterministically.
+version: 1
+k: 3
+min_recall: 0.85
+cases:
+  - query: Which restaurants fail inspection most often?
+    expect_any: [mart_restaurants, restaurant_failure_rate]
+  - query: What are the most common health code violations?
+    expect_any: [mart_top_violations, top_violation_frequency]
+  - query: How have inspection counts changed over time?
+    expect_any: [mart_inspections_over_time]
+  - query: What specific violations did a restaurant receive?
+    expect_any: [mart_inspection_violations]
+  - query: What is the inspection compliance rate for restaurants?
+    expect_any: [mart_restaurants, restaurant_compliance_rate]
+  - query: What are the average demerits per restaurant?
+    expect_any: [mart_restaurants, restaurant_avg_demerits]
+  - query: How many restaurants have had closures?
+    expect_any: [mart_restaurants]
+  - query: Which violation codes carry the most demerits?
+    expect_any: [mart_top_violations]

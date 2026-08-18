@@ -49,8 +49,10 @@ def test_failure_rate_query_retrieves_metric(retriever: Retriever) -> None:
 
 
 def test_in_domain_outscores_out_of_domain(retriever: Retriever) -> None:
-    in_score = retriever.retrieve("restaurant inspection violations", k=1)[0].score
-    out_score = retriever.retrieve("lake mead water elevation forecast", k=1)[0].score
+    # grounding_score is the calibrated dense signal (retrieve() now returns RRF
+    # fusion scores, which are rank-based rather than relevance magnitudes).
+    in_score = retriever.grounding_score("restaurant inspection violations")
+    out_score = retriever.grounding_score("lake mead water elevation forecast")
     assert in_score > out_score
 
 
@@ -76,5 +78,7 @@ def test_fastembed_backend_end_to_end(catalog: Catalog, registry: MetricRegistry
 
     assert retriever.is_grounded("which restaurants fail inspection most often?") is True
     assert retriever.is_grounded("what is the weather forecast for Reno?") is False
+    # Hybrid surfaces the violations context via the table doc, its metric, or the
+    # matching exemplar — any top hit that points at mart_top_violations counts.
     hits = retriever.retrieve("most common health code violations", k=3)
-    assert "mart_top_violations" in [h.doc.ref for h in hits]
+    assert any("mart_top_violations" in h.doc.ref for h in hits)
