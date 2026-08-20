@@ -13,16 +13,23 @@ tests inject a deterministic fake so the retrieval logic is verified offline.
 from __future__ import annotations
 
 import logging
+import re
+from collections import defaultdict
 from collections.abc import Sequence
 from typing import Protocol
 
 import numpy as np
 from pydantic import BaseModel
+from rank_bm25 import BM25Okapi
 
 from tiresias.catalog import Catalog, load_catalog
 from tiresias.metrics import MetricRegistry, load_registry
 
 logger = logging.getLogger(__name__)
+
+# Reciprocal Rank Fusion constant. Dampens the contribution of lower ranks; 60 is
+# the value from the original RRF paper and a common default.
+RRF_K = 60
 
 # Below this top-1 cosine score, retrieval hard-abstains (clearly out-of-domain).
 # This is a LENIENT pre-filter, not the final grounding decision: in-domain and
@@ -156,8 +163,21 @@ def _normalize(matrix: np.ndarray) -> np.ndarray:
     return matrix / np.where(norms == 0, 1.0, norms)
 
 
+def _tokenize(text: str) -> list[str]:
+    """Lowercase word tokens, splitting on non-letters so `violation_code` -> {violation, code}."""
+    return re.findall(r"[a-z]+", text.lower())
+
+
 class Retriever:
-    """In-memory dense retriever: embed the corpus once, cosine top-k per query."""
+    """Hybrid retriever: dense embeddings + lexical BM25, fused by Reciprocal Rank
+    Fusion.
+
+    Dense catches semantic paraphrase ("fail inspection" ~ "non-compliant"); BM25
+    catches exact column/table tokens the embedder may under-weight. The abstain
+    gate (:meth:`is_grounded`) stays on the *dense* cosine, which is what the
+    grounding threshold was calibrated against — hybrid improves the *ranking* of
+    the context handed to the planner without changing the abstain decision.
+    """
 
     def __init__(
         self,
@@ -168,22 +188,36 @@ class Retriever:
         self.corpus: tuple[RetrievedDoc, ...] = tuple(corpus) if corpus else build_corpus()
         vectors = np.asarray(self.embedder.embed([d.text for d in self.corpus]), dtype=float)
         self._matrix = _normalize(vectors)
+        self._bm25 = BM25Okapi([_tokenize(d.text) for d in self.corpus])
+
+    def _dense_scores(self, query: str) -> np.ndarray:
+        query_vec = _normalize(np.asarray(self.embedder.embed([query]), dtype=float))
+        return (self._matrix @ query_vec.T).ravel()
+
+    def grounding_score(self, query: str) -> float:
+        """Top-1 *dense* cosine — the signal the abstain threshold is calibrated on."""
+        scores = self._dense_scores(query)
+        return float(scores.max()) if scores.size else float("nan")
 
     def retrieve(self, query: str, k: int = 4) -> list[RetrievalHit]:
-        """Return the top-k grounding docs for ``query``, most similar first."""
-        query_vec = _normalize(np.asarray(self.embedder.embed([query]), dtype=float))
-        scores = (self._matrix @ query_vec.T).ravel()
-        order = np.argsort(scores)[::-1][:k]
-        hits = [
-            RetrievalHit(doc=self.corpus[i], score=float(scores[i])) for i in order
-        ]
-        logger.debug(
-            "Retrieved %d docs for %r; top score %.3f",
-            len(hits), query, hits[0].score if hits else float("nan"),
-        )
+        """Return the top-k grounding docs, fusing dense + BM25 rankings via RRF.
+
+        The returned score is the RRF fusion score (rank-based), not a cosine — use
+        :meth:`grounding_score` for the calibrated dense signal.
+        """
+        dense_order = np.argsort(self._dense_scores(query))[::-1]
+        lexical_order = np.argsort(self._bm25.get_scores(_tokenize(query)))[::-1]
+
+        fused: dict[int, float] = defaultdict(float)
+        for ranking in (dense_order, lexical_order):
+            for rank, idx in enumerate(ranking):
+                fused[int(idx)] += 1.0 / (RRF_K + rank)
+
+        order = sorted(fused, key=lambda i: fused[i], reverse=True)[:k]
+        hits = [RetrievalHit(doc=self.corpus[i], score=fused[i]) for i in order]
+        logger.debug("Retrieved %d docs for %r (hybrid RRF)", len(hits), query)
         return hits
 
     def is_grounded(self, query: str, threshold: float = GROUNDING_THRESHOLD) -> bool:
-        """Whether any corpus doc is similar enough to treat the query as in-domain."""
-        hits = self.retrieve(query, k=1)
-        return bool(hits) and hits[0].score >= threshold
+        """Whether the query is in-domain enough to attempt an answer (dense gate)."""
+        return self.grounding_score(query) >= threshold

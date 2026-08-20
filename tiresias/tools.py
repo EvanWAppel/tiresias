@@ -91,3 +91,58 @@ def metrics_text(settings: TiresiasSettings = DEFAULT_SETTINGS) -> str:
 def get_metric(name: str, settings: TiresiasSettings = DEFAULT_SETTINGS) -> Metric:
     """Look up one governed metric by name (raises KeyError if unknown)."""
     return load_registry(settings.metrics_path).get(name)
+
+
+def list_tables(settings: TiresiasSettings = DEFAULT_SETTINGS) -> list[dict]:
+    """The in-scope tables with their columns and types (structured, for tools)."""
+    catalog = load_catalog(settings)
+    return [
+        {
+            "name": table.name,
+            "schema": table.db_schema,
+            "description": table.description,
+            "columns": [{"name": c.name, "type": c.type} for c in table.columns],
+        }
+        for table in catalog.tables
+    ]
+
+
+def profile_column(
+    table: str, column: str, settings: TiresiasSettings = DEFAULT_SETTINGS
+) -> dict:
+    """Read-only profile of one column of an allowed table.
+
+    Both identifiers are validated against the catalog (so they must be known,
+    allowlisted names) before the profiling query is built — this is a trusted,
+    fixed-shape aggregate, not agent-drafted SQL.
+    """
+    catalog = load_catalog(settings)
+    tbl = catalog.get(table)  # raises KeyError if the table is out of scope
+    col = next((c for c in tbl.columns if c.name == column), None)
+    if col is None:
+        raise KeyError(
+            f"column {column!r} not in {table}; columns: {list(tbl.column_names)}"
+        )
+
+    query = (
+        f'select count(*) as row_count, '
+        f'count("{column}") as non_null_count, '
+        f'count(distinct "{column}") as distinct_count, '
+        f'min("{column}")::varchar as min_value, '
+        f'max("{column}")::varchar as max_value '
+        f'from {tbl.db_schema}."{table}"'
+    )
+    row = db.query(query, settings.db_path).iloc[0]
+    row_count = int(row["row_count"])
+    non_null = int(row["non_null_count"])
+    return {
+        "table": table,
+        "column": column,
+        "type": col.type,
+        "row_count": row_count,
+        "non_null_count": non_null,
+        "null_count": row_count - non_null,
+        "distinct_count": int(row["distinct_count"]),
+        "min": row["min_value"],
+        "max": row["max_value"],
+    }

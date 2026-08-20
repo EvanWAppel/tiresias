@@ -78,6 +78,36 @@ def build_server() -> MCPServer:
             return {"ok": False, "error": str(exc)}
         return {"ok": True, **result.model_dump()}
 
+    @server.tool(
+        description="List the in-scope tables (marts) with their columns and types."
+    )
+    def list_tables() -> list[dict[str, Any]]:
+        return tools.list_tables()
+
+    @server.tool(
+        description=(
+            "Profile one column of an allowed table: row/null/distinct counts and "
+            "min/max. Read-only. Returns {ok: false, error} for an unknown table/column."
+        )
+    )
+    def profile_column(table: str, column: str) -> dict[str, Any]:
+        try:
+            return {"ok": True, **tools.profile_column(table, column)}
+        except KeyError as exc:
+            return {"ok": False, "error": str(exc)}
+
+    @server.tool(
+        description=(
+            "Get a governed metric definition by name (canonical expression + the "
+            "columns it is grounded in). Returns {ok: false, error} if unknown."
+        )
+    )
+    def get_metric(name: str) -> dict[str, Any]:
+        try:
+            return {"ok": True, **tools.get_metric(name).model_dump()}
+        except KeyError as exc:
+            return {"ok": False, "error": str(exc)}
+
     return server
 
 

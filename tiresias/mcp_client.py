@@ -50,16 +50,20 @@ class WarehouseSession:
     async def read_metrics(self) -> str:
         return _resource_text(await self._session.read_resource(METRICS_URI))
 
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        """Invoke an MCP tool and return its structured payload (or parsed text)."""
+        result = await self._session.call_tool(name, arguments)
+        if result.structured_content is not None:
+            return result.structured_content
+        return json.loads(_tool_text(result))
+
     async def run_sql(self, sql: str) -> dict[str, Any]:
         """Call ``run_validated_sql`` and return its ``{ok, ...}`` payload.
 
         A guard/validation failure is a normal ``{ok: False, error}`` payload the
         caller inspects — not an exception.
         """
-        result = await self._session.call_tool("run_validated_sql", {"sql": sql})
-        if result.structured_content is not None:
-            return result.structured_content
-        return json.loads(_tool_text(result))
+        return await self.call_tool("run_validated_sql", {"sql": sql})
 
 
 @asynccontextmanager

@@ -171,6 +171,35 @@ Phase-0 domain (restaurant marts), expand outward.
 **Acceptance:** clean dbt project, green CI, browsable metric catalog; `dbt parse
 --target snow` succeeds and DuckDB-specific SQL is guarded/documented.
 
+---
+
+## Phase 2 — deepen the MCP server + RAG
+
+### P2.1 — Hybrid retrieval (BM25 + dense)
+- [x] `tiresias/retrieval.py`: added lexical **BM25** (`rank_bm25`) fused with the
+      dense embeddings via **Reciprocal Rank Fusion** (RRF_K=60). Dense catches
+      semantic paraphrase; BM25 catches exact column/table tokens. The abstain gate
+      (`is_grounded`) stays on the calibrated dense cosine (`grounding_score`), so the
+      gold-eval abstain behavior is unchanged; hybrid only improves context *ranking*.
+      7 retrieval tests green (incl. real fastembed).
+
+### P2.2 — Retrieval-quality mini-eval
+- [x] `tiresias/evals/retrieval_gold.yaml` + `tests/test_retrieval_quality.py`:
+      recall@k over labeled query→table/metric pairs, no LLM. **recall@3 = 1.00 (8/8)**
+      with real fastembed. A retrieval regression now turns red deterministically.
+
+### P2.3 — Deepen the MCP tool surface
+- [x] Added `list_tables`, `profile_column`, `get_metric` tools alongside
+      `run_validated_sql` (core in `tools.py`, wrappers in `mcp_server.py`). Generic
+      `WarehouseSession.call_tool`. 4 new end-to-end MCP tests (list, profile,
+      metric lookup, structured errors). `profile_column` builds a fixed-shape
+      aggregate from catalog-validated identifiers (not agent SQL). 48 tests green.
+
+### P2.4 — Prove the server from Claude Code (manual)
+- [ ] Screencast: Claude Code querying the warehouse through the Tiresias MCP server
+      (stdio). *(Evan — manual demo; the stdio entrypoint `python -m tiresias.mcp_server`
+      already exists.)*
+
 ## Deferred to later phases (not Phase 0)
 - CI eval-regression gate + restaurant-mart seeds/contracts → Phase 1/Phase 4 (PRD).
   (CI is untouched in Phase 0; the tiresias tests need the warehouse, which CI lacks
