@@ -31,7 +31,7 @@ MAX_QUESTION_CHARS = int(os.environ.get("TIRESIAS_MAX_QUESTION_CHARS", "500"))
 MAX_PER_SESSION = int(os.environ.get("TIRESIAS_MAX_PER_SESSION", "15"))
 MAX_PER_DAY = int(os.environ.get("TIRESIAS_MAX_PER_DAY", "200"))
 
-st.title("🔮 Tiresias — ask the warehouse")
+st.title("Tiresias — ask the warehouse")
 st.caption(
     "A grounded agent over the restaurant-inspection marts. It shows its SQL and "
     "citations, and **abstains** rather than guess when a question falls outside "
