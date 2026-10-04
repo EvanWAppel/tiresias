@@ -208,20 +208,24 @@ Phase-0 domain (restaurant marts), expand outward.
 - [x] Column docs for all in-scope marts (113 in `marts.yml`, 27 in `tracts.yml`),
       written from mart SQL + loader code. `dbt build --select marts` green
       (PASS=87, WARN=1; the pre-existing road end-after-start warning).
-- [x] `ALLOWED_TABLES` (30 marts, explicit) replaces `PHASE0_TABLES`;
+- [x] `ALLOWED_TABLES` (explicit; 29 marts after review) replaces `PHASE0_TABLES`;
       `mart_tract_assignment_audit` excluded. Tests: catalog spans every domain,
       audit excluded, no stale allowlist entries, **every column documented**,
       guard accepts crime / rejects audit + staging.
 - [x] Planner prompt, abstain message, MCP instructions, and Streamlit copy
       generalized beyond restaurants (prompt now carries snapshot/forecast and
       column-caveat guidance).
-- [x] Retrieval: 22 per-domain exemplars (incl. restaurant-vs-road "closure"
+- [x] Retrieval: 21 new per-domain exemplars (incl. restaurant-vs-road "closure"
       disambiguation); grounding threshold recalibrated 0.55 → **0.56** on real
       fastembed scores. Retrieval gold 8 → 21 cases, **recall@3 = 1.00 (21/21)**.
 - [x] Gold set 15 → 33 cases (26 answerable across every domain, 7 abstain incl.
       subtle OOD). 56 unit tests + 24 app tests green; ruff + ty clean.
 - [x] **Live eval 33/33 green** (Opus 4.8, 2026-10-03): every domain answered with the expected table cited; all 7 abstain cases (incl. forecast, home price, school scores, live traffic) correctly refused.
 - [x] Evan reviewed the column docs + confirmed the DECISIONS.md entry (2026-10-03).
+- [x] Adversarial review (Opus correctness + Sonnet security):
+      `reviews/2026-10-03-tiresias-all-domains.md`. Fixed C1–C15 and S1 (enforced query
+      timeout); crime map sample excluded; gold 33 → 36. **Live eval 36/36.**
+- [?] S2 (map-only JSON columns) awaiting Evan's call (`BLOCKED.md`).
 - [ ] Deploy to Railway (needs explicit approval; Railway key is the scoped one).
 
 ### P3.2 — Later in Phase 3
