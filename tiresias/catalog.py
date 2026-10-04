@@ -2,7 +2,7 @@
 
 Column *types* come from ``target/catalog.json`` (dbt's warehouse introspection);
 column and model *descriptions* come from ``target/manifest.json`` (the dbt docs).
-The catalog is bounded to the Phase-0 table allowlist so retrieval, the MCP
+The catalog is bounded to the table allowlist so retrieval, the MCP
 resource, and the SQL guard all share one honest picture of what exists.
 
 Regenerate the artifacts with ``uv run dbt docs generate --profiles-dir .`` if the

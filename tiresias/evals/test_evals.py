@@ -1,4 +1,4 @@
-"""Phase-0 eval harness — the honesty benchmark, run under pytest.
+"""Eval harness — the honesty benchmark, run under pytest.
 
 Executes the *real* agent (real retrieval + Anthropic provider + MCP execution)
 against the versioned gold set and scores two things deterministically:

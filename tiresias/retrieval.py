@@ -1,7 +1,7 @@
-"""Minimal dense retrieval over the Phase-0 schema + metric corpus.
+"""Hybrid retrieval over the Elvis schema + metric corpus.
 
-The corpus is deliberately small — the four restaurant marts, the one governed
-metric, and a handful of natural-language exemplars — so an in-memory cosine index
+The corpus is deliberately small — the allowlisted marts, the governed metrics,
+and a set of natural-language exemplars per domain — so an in-memory cosine index
 is the honest, un-over-engineered choice (see TIRESIAS-PRD "Open decisions" #1).
 Retrieval returns *schema and metric context*, not prose, so the agent drafts SQL
 grounded in real columns and blessed metrics.
@@ -33,13 +33,15 @@ RRF_K = 60
 
 # Below this top-1 cosine score, retrieval hard-abstains (clearly out-of-domain).
 # This is a LENIENT pre-filter, not the final grounding decision: in-domain and
-# subtle out-of-domain questions overlap (e.g. "average tip per waiter" scores like
-# a real restaurant question because it mentions restaurants, but no such column
-# exists), so borderline cases are passed through to the planner — which sees the
-# full schema and is the authoritative abstain decider. Calibrated on the Phase-0
-# gold set (default fastembed BAAI/bge-small-en-v1.5): clearly-OOD questions
-# measured 0.45-0.54, answerable ones 0.59-0.80; 0.55 sits in that gap.
-GROUNDING_THRESHOLD = 0.55
+# subtle out-of-domain questions overlap (e.g. "weather forecast for Las Vegas" or
+# "median home price in Las Vegas" score like real questions because they name
+# the city and a nearby domain, but nothing in the warehouse answers them), so
+# borderline cases are passed through to the planner — which sees the full schema
+# and is the authoritative abstain decider. Recalibrated for the all-domains corpus
+# (default fastembed BAAI/bge-small-en-v1.5): generic off-topic questions measured
+# 0.43-0.555, answerable questions across every domain 0.598-0.83; 0.56 sits at
+# the top of the off-topic band, keeping ~0.04 margin below the lowest answerable.
+GROUNDING_THRESHOLD = 0.56
 
 # NL question -> the tables/metric that answer it. These teach retrieval the mapping
 # from how people ask to what actually holds the answer.
@@ -63,6 +65,90 @@ EXEMPLARS: tuple[tuple[str, str], ...] = (
     (
         "What is the inspection failure rate for a restaurant?",
         "Use the restaurant_failure_rate metric on mart_restaurants.failure_rate_pct.",
+    ),
+    (
+        "How many restaurants have been closed by the health district?",
+        "Use mart_restaurants (closures, failed_inspections). Road closures are a different domain (mart_road_construction).",
+    ),
+    (
+        "How many police calls were there per month?",
+        "Use mart_crime_monthly (incident_month, incident_count). These are LVMPD calls for service, not confirmed crimes.",
+    ),
+    (
+        "What are the most common types of police calls?",
+        "Use mart_crime_by_type, ranked by incident_count.",
+    ),
+    (
+        "What hour of the day has the most police calls?",
+        "Use mart_crime_by_hour_weekday, summing incident_count by hour_of_day.",
+    ),
+    (
+        "How many building permits were issued and what were they worth?",
+        "Use mart_permits_monthly or mart_permits_by_type (permit_count, total_valuation) for Las Vegas; mart_henderson_permits for Henderson.",
+    ),
+    (
+        "How many visitors came to Las Vegas each month?",
+        "Use mart_lvcva_indicators where metric ILIKE 'Visitor Volume'.",
+    ),
+    (
+        "How has gaming revenue changed over time?",
+        "Use mart_lvcva_indicators where metric ILIKE 'Gaming Revenue%'.",
+    ),
+    (
+        "How many 110 degree days were there each year?",
+        "Use mart_weather_extreme_days (days_110f_plus by observed_year).",
+    ),
+    (
+        "What was the hottest month on record?",
+        "Use mart_weather_monthly ordered by record_high_f or avg_high_f.",
+    ),
+    (
+        "How bad is the air quality in Las Vegas?",
+        "Use mart_air_quality_monthly or mart_air_quality_daily (AQI by parameter).",
+    ),
+    (
+        "How low has Lake Mead's water level dropped?",
+        "Use mart_lake_mead_monthly (min_elevation_ft, avg_elevation_ft by reading_month).",
+    ),
+    (
+        "Which day of the year has the most weddings?",
+        "Use mart_marriage_daily, summing license_count by month_of_year and day_of_month.",
+    ),
+    (
+        "Where do couples who marry in Las Vegas come from?",
+        "Use mart_marriage_by_origin ranked by license_count.",
+    ),
+    (
+        "How many same-sex marriages are there each year?",
+        "Use mart_marriage_by_gender_year where couple_type = 'Same-sex'.",
+    ),
+    (
+        "How many short-term rentals (Airbnbs) are there in each city?",
+        "Use mart_short_term_rentals grouped by jurisdiction.",
+    ),
+    (
+        "Which roads have active construction or closures?",
+        "Use mart_road_construction (road_name, status, start_date, end_date, is_full_closure).",
+    ),
+    (
+        "Which parks are largest or have water features?",
+        "Use mart_parks (acres, has_water, jurisdiction).",
+    ),
+    (
+        "Which artists have the most public art pieces?",
+        "Use mart_public_art_metro (Las Vegas + Henderson) grouped by artist.",
+    ),
+    (
+        "Which apartment complexes have the most fire code violations?",
+        "Use mart_fire_prevention_inspections ranked by total_violations.",
+    ),
+    (
+        "Which census tracts have the most police calls per resident?",
+        "Use mart_tract_metrics where topic = 'calls', ranked by rate_per_1000 (null unless coverage = 'available').",
+    ),
+    (
+        "What kinds of business licenses does Henderson issue?",
+        "Use mart_henderson_licenses_by_type (license_count, active_count).",
     ),
 )
 

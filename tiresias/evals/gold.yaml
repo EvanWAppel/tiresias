@@ -1,6 +1,6 @@
-# Tiresias Phase-0 gold set — the honesty benchmark.
+# Tiresias gold set — the honesty benchmark.
 #
-# Answerable restaurant-inspection questions AND deliberately unanswerable ones
+# Answerable questions across every Elvis domain AND deliberately unanswerable ones
 # (out-of-domain, no-such-column, ambiguous). The eval scores grounded accuracy
 # *and* correct refusal — abstention is a first-class, tested behavior.
 #
@@ -51,12 +51,75 @@ cases:
     expect: answer
     must_reference: [mart_restaurants]
 
+  # --- answerable: all-domains expansion (one case per domain) ---
+  - id: crime_monthly
+    question: How many police calls for service were there each month?
+    expect: answer
+    must_reference: [mart_crime_monthly]
+  - id: crime_peak_hour
+    question: Which hour of the day has the most police calls?
+    expect: answer
+    must_reference: [mart_crime_by_hour_weekday]
+  - id: permits_by_valuation
+    question: Which building permit application types have the highest total valuation?
+    expect: answer
+    must_reference: [mart_permits_by_type]
+  - id: henderson_licenses
+    question: Which Henderson business license types have the most active licenses?
+    expect: answer
+    must_reference: [mart_henderson_licenses_by_type]
+  - id: visitor_volume_peak
+    question: Which month had the highest Las Vegas visitor volume?
+    expect: answer
+    must_reference: [mart_lvcva_indicators]
+  - id: extreme_heat_days
+    question: How many days of 110 degrees or hotter were there each year?
+    expect: answer
+    must_reference: [mart_weather_extreme_days]
+  - id: air_quality_peak
+    question: Which month had the highest peak AQI, and for which pollutant?
+    expect: answer
+    must_reference: [mart_air_quality_monthly]
+  - id: lake_mead_low
+    question: What is the lowest monthly Lake Mead elevation on record?
+    expect: answer
+    must_reference: [mart_lake_mead_monthly]
+  - id: marriage_origin
+    question: Which states do the most couples marrying in Clark County come from?
+    expect: answer
+    must_reference: [mart_marriage_by_origin]
+  - id: same_sex_by_year
+    question: How many same-sex marriage licenses were issued each year?
+    expect: answer
+    must_reference: [mart_marriage_by_gender_year]
+  - id: rentals_by_city
+    question: How many short-term rentals are there in each jurisdiction?
+    expect: answer
+    must_reference: [mart_short_term_rentals]
+  - id: road_full_closures
+    question: How many road construction projects are full road closures?
+    expect: answer
+    must_reference: [mart_road_construction]
+  - id: parks_with_water
+    question: How many parks have a water feature, by jurisdiction?
+    expect: answer
+    must_reference: [mart_parks]
+  - id: public_art_artists
+    question: Which artists have the most public art pieces across Las Vegas and Henderson?
+    expect: answer
+    must_reference: [mart_public_art_metro]
+  - id: fire_violations
+    question: Which residential properties have the most fire prevention violations?
+    expect: answer
+    must_reference: [mart_fire_prevention_inspections]
+  - id: tract_call_rate
+    question: Which census tracts have the highest rate of police calls per 1,000 residents?
+    expect: answer
+    must_reference: [mart_tract_metrics]
+
   # --- unanswerable (must abstain) ---
   - id: ood_weather
     question: What is the weather forecast for Las Vegas this weekend?
-    expect: abstain
-  - id: ood_crime
-    question: How many violent crimes were reported downtown last year?
     expect: abstain
   - id: ood_bitcoin
     question: What will the price of Bitcoin be tomorrow?
@@ -66,4 +129,13 @@ cases:
     expect: abstain
   - id: ambiguous_count
     question: How many are there?
+    expect: abstain
+  - id: ood_home_price
+    question: What is the median home sale price in Las Vegas?
+    expect: abstain
+  - id: ood_school_scores
+    question: What are the average school test scores in Clark County?
+    expect: abstain
+  - id: ood_live_traffic
+    question: Is there a traffic jam on I-15 right now?
     expect: abstain

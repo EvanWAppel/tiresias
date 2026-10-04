@@ -77,7 +77,8 @@ def test_fastembed_backend_end_to_end(catalog: Catalog, registry: MetricRegistry
         pytest.skip(f"fastembed model unavailable: {exc}")
 
     assert retriever.is_grounded("which restaurants fail inspection most often?") is True
-    assert retriever.is_grounded("what is the weather forecast for Reno?") is False
+    assert retriever.is_grounded("how many police calls happened in 2024?") is True
+    assert retriever.is_grounded("what's the best laptop to buy?") is False
     # Hybrid surfaces the violations context via the table doc, its metric, or the
     # matching exemplar — any top hit that points at mart_top_violations counts.
     hits = retriever.retrieve("most common health code violations", k=3)

@@ -1,7 +1,7 @@
-"""Tiresias — a grounded civic-intelligence agent over the restaurant marts.
+"""Tiresias — a grounded civic-intelligence agent over the Elvis marts.
 
-Ask a natural-language question about Las Vegas restaurant inspections. Tiresias
-plans SQL grounded in the real schema and the governed failure-rate metric,
+Ask a natural-language question about any Elvis dataset. Tiresias plans SQL
+grounded in the real schema and the governed metrics,
 executes it read-only through its MCP tool, and answers **with the SQL and
 citations shown** — or **abstains** when it can't ground the answer in a real row.
 
@@ -33,9 +33,10 @@ MAX_PER_DAY = int(os.environ.get("TIRESIAS_MAX_PER_DAY", "200"))
 
 st.title("Tiresias — ask the warehouse")
 st.caption(
-    "A grounded agent over the restaurant-inspection marts. It shows its SQL and "
-    "citations, and **abstains** rather than guess when a question falls outside "
-    "the data. Phase 0: restaurant inspections only."
+    "A grounded agent over every Elvis dataset — restaurant inspections, police "
+    "calls, permits, tourism, weather, air quality, Lake Mead, marriages, rentals, "
+    "roads, parks, and public art. It shows its SQL and citations, and "
+    "**abstains** rather than guess when a question falls outside the data."
 )
 
 if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -81,12 +82,13 @@ agent = _get_agent()
 
 st.markdown(
     "**Try:** *Which restaurants have the highest failure rate?* · "
-    "*What are the most common violations?* · "
-    "*How have inspection counts changed over time?*"
+    "*What hour of the day has the most police calls?* · "
+    "*How many 110°F days were there each year?* · "
+    "*Which state do most couples marrying in Vegas come from?*"
 )
 
 question = st.chat_input(
-    "Ask about Las Vegas restaurant inspections…", max_chars=MAX_QUESTION_CHARS
+    "Ask about Las Vegas open data…", max_chars=MAX_QUESTION_CHARS
 )
 if question:
     query = question.strip()

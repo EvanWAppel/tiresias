@@ -32,9 +32,10 @@ from tiresias.retrieval import FastEmbedEmbedder, Retriever, SupportsRetrieval
 logger = logging.getLogger(__name__)
 
 _ABSTAIN_MESSAGE = (
-    "I can't answer that from the restaurant-inspection warehouse, so I'm not going "
-    "to guess. Try a question about Las Vegas restaurant inspections — for example, "
-    "failure rates, common violations, or inspection counts over time."
+    "I can't answer that from the Elvis Las Vegas open-data warehouse, so I'm not "
+    "going to guess. Try a question about what it holds — restaurant inspections, "
+    "police calls, building permits, tourism, weather, air quality, Lake Mead, "
+    "marriages, short-term rentals, road construction, parks, or public art."
 )
 
 
@@ -67,7 +68,7 @@ class _State(TypedDict, total=False):
 
 
 class TiresiasAgent:
-    """Grounded civic-intelligence agent over the restaurant-inspection domain."""
+    """Grounded civic-intelligence agent over the Elvis Las Vegas open-data marts."""
 
     def __init__(
         self,

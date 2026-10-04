@@ -59,7 +59,17 @@ def test_rejects_multi_statement() -> None:
 
 def test_rejects_table_outside_allowlist() -> None:
     with pytest.raises(SqlGuardError, match="allowlist"):
-        guard_sql("select * from mart_crime_by_type")
+        guard_sql("select * from mart_tract_assignment_audit")
+
+
+def test_accepts_non_restaurant_domain_table() -> None:
+    safe = guard_sql("select incident_month, incident_count from mart_crime_monthly")
+    assert safe.tables == ("mart_crime_monthly",)
+
+
+def test_rejects_staging_view() -> None:
+    with pytest.raises(SqlGuardError, match="allowlist"):
+        guard_sql("select * from stg_crime_calls")
 
 
 def test_rejects_disallowed_schema() -> None:

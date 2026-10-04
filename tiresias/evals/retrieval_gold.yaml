@@ -23,3 +23,30 @@ cases:
     expect_any: [mart_restaurants]
   - query: Which violation codes carry the most demerits?
     expect_any: [mart_top_violations]
+  # --- all-domains expansion ---
+  - query: How many police calls were there each month?
+    expect_any: [mart_crime_monthly]
+  - query: What are the most common types of police calls?
+    expect_any: [mart_crime_by_type]
+  - query: Which hour of the day has the most calls for service?
+    expect_any: [mart_crime_by_hour_weekday]
+  - query: How many building permits were issued per month?
+    expect_any: [mart_permits_monthly, mart_henderson_permits]
+  - query: How many visitors came to Las Vegas?
+    expect_any: [mart_lvcva_indicators]
+  - query: How many days over 110 degrees were there each year?
+    expect_any: [mart_weather_extreme_days]
+  - query: Which month had the worst air quality?
+    expect_any: [mart_air_quality_monthly, mart_air_quality_daily]
+  - query: How low has Lake Mead's elevation gotten?
+    expect_any: [mart_lake_mead_monthly]
+  - query: Which state do most couples marrying in Vegas come from?
+    expect_any: [mart_marriage_by_origin]
+  - query: How many short-term rentals are in Henderson?
+    expect_any: [mart_short_term_rentals]
+  - query: Which roads are fully closed for construction?
+    expect_any: [mart_road_construction]
+  - query: Which properties have the most fire code violations?
+    expect_any: [mart_fire_prevention_inspections]
+  - query: Which census tract has the most police calls per 1,000 residents?
+    expect_any: [mart_tract_metrics]

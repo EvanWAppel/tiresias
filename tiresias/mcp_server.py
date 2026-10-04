@@ -37,9 +37,11 @@ def build_server() -> MCPServer:
         name="tiresias-warehouse",
         version="0.0.0",
         instructions=(
-            "Read-only access to the Elvis Las Vegas restaurant-inspection warehouse. "
-            "Read the catalog and metric resources to ground SQL in real columns and "
-            "the governed failure-rate metric, then call run_validated_sql. Only the "
+            "Read-only access to the Elvis Las Vegas open-data warehouse (restaurant "
+            "inspections, police calls, permits, tourism, weather, air quality, Lake "
+            "Mead, marriages, rentals, roads, parks, public art, tract counts). Read "
+            "the catalog and metric resources to ground SQL in real columns and the "
+            "governed metrics, then call run_validated_sql. Only the "
             "allowlisted marts are queryable; the tool is SELECT-only and row-capped."
         ),
     )
@@ -64,7 +66,7 @@ def build_server() -> MCPServer:
 
     @server.tool(
         description=(
-            "Execute a single read-only SELECT against the allowlisted restaurant "
+            "Execute a single read-only SELECT against the allowlisted Elvis "
             "marts. The query is validated (SELECT-only, known tables, EXPLAIN-checked) "
             "and row-capped. Returns rows plus the exact SQL that ran (cite it). On a "
             "validation failure, returns {ok: false, error} so you can repair the SQL."
