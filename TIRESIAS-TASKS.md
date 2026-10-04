@@ -200,6 +200,35 @@ Phase-0 domain (restaurant marts), expand outward.
       (stdio). *(Evan — manual demo; the stdio entrypoint `python -m tiresias.mcp_server`
       already exists.)*
 
+---
+
+## Phase 3 — all domains (branch `feat/tiresias-all-domains`)
+
+### P3.1 — Widen scope to every user-facing mart
+- [x] Column docs for all in-scope marts (113 in `marts.yml`, 27 in `tracts.yml`),
+      written from mart SQL + loader code. `dbt build --select marts` green
+      (PASS=87, WARN=1; the pre-existing road end-after-start warning).
+- [x] `ALLOWED_TABLES` (30 marts, explicit) replaces `PHASE0_TABLES`;
+      `mart_tract_assignment_audit` excluded. Tests: catalog spans every domain,
+      audit excluded, no stale allowlist entries, **every column documented**,
+      guard accepts crime / rejects audit + staging.
+- [x] Planner prompt, abstain message, MCP instructions, and Streamlit copy
+      generalized beyond restaurants (prompt now carries snapshot/forecast and
+      column-caveat guidance).
+- [x] Retrieval: 22 per-domain exemplars (incl. restaurant-vs-road "closure"
+      disambiguation); grounding threshold recalibrated 0.55 → **0.56** on real
+      fastembed scores. Retrieval gold 8 → 21 cases, **recall@3 = 1.00 (21/21)**.
+- [x] Gold set 15 → 33 cases (26 answerable across every domain, 7 abstain incl.
+      subtle OOD). 56 unit tests + 24 app tests green; ruff + ty clean.
+- [x] **Live eval 33/33 green** (Opus 4.8, 2026-10-03): every domain answered with the expected table cited; all 7 abstain cases (incl. forecast, home price, school scores, live traffic) correctly refused.
+- [x] Evan reviewed the column docs + confirmed the DECISIONS.md entry (2026-10-03).
+- [ ] Deploy to Railway (needs explicit approval; Railway key is the scoped one).
+
+### P3.2 — Later in Phase 3
+- [ ] Governed metrics for non-restaurant domains (one domain at a time).
+- [ ] Cross-domain joins (e.g. weather × inspections, tourism × crime).
+- [ ] Bedrock provider behind the shim.
+
 ## Deferred to later phases (not Phase 0)
 - CI eval-regression gate + restaurant-mart seeds/contracts → Phase 1/Phase 4 (PRD).
   (CI is untouched in Phase 0; the tiresias tests need the warehouse, which CI lacks
