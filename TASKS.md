@@ -15,7 +15,8 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       Elvis's untracked planning brief is not carried over; this repo's
       `PRD.md` is engineering-only.
 - [x] Scanned every historical blob for secrets/private strings before publishing.
-- [ ] Create public `EvanWAppel/tiresias`; push; apply standard branch protection.
+- [x] Created public `EvanWAppel/tiresias`; pushed `main`; standard branch protection
+      applied (2026-10-04).
 
 ### E1 — Config-driven engine
 - [ ] `tiresias.yml` schema (Pydantic): city, blurb, paths, tables, map-only
@@ -38,7 +39,8 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       pin `v0.1.0`; live eval 36/36; deploy.
 
 ### E5 — Sibling cities
-- [ ] robbins (decide: replace or sit alongside `nl_sql.py`).
+- [ ] robbins: Tiresias **replaces** `nl_sql.py` / `sql_safety.py` / `semantic.py`
+      (Evan, 2026-10-04); old modules deleted once robbins' gold set passes.
 - [ ] gregan (column docs first).
 - [ ] groening (column docs first).
 

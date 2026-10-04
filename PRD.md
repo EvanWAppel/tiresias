@@ -97,5 +97,4 @@ the optional Streamlit chat.
 
 ## Open questions
 
-- robbins already has its own text-to-SQL (`nl_sql.py`): replace it or run
-  alongside? Decide at E5.
+- None open. (robbins' own text-to-SQL: Tiresias replaces it; see DECISIONS.md.)

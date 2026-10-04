@@ -16,3 +16,13 @@ name); planning docs **move here**.
 
 Extraction detail: Elvis's original planning brief was never tracked there and
 is not carried over; `PRD.md` here is a new, engineering-only document.
+
+## 2026-10-04 — Rollout order and robbins' existing text-to-SQL (confirmed by Evan)
+
+Published `EvanWAppel/tiresias` (public, standard protection) and kept the phase
+order: **Elvis adopts v0.1.0 first** (E4), then robbins → gregan → groening
+(rejected: going straight to the siblings, which would lose Elvis's 36/36 live
+eval as proof that the extraction kept the same behavior). In robbins, **Tiresias
+replaces** `nl_sql.py` / `sql_safety.py` / `semantic.py` (rejected: running
+alongside, which leaves two text-to-SQL paths with separate guards to maintain);
+the old modules go once robbins' gold set passes.
