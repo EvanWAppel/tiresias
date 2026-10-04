@@ -222,7 +222,7 @@ Phase-0 domain (restaurant marts), expand outward.
       subtle OOD). 56 unit tests + 24 app tests green; ruff + ty clean.
 - [x] **Live eval 33/33 green** (Opus 4.8, 2026-10-03): every domain answered with the expected table cited; all 7 abstain cases (incl. forecast, home price, school scores, live traffic) correctly refused.
 - [x] Evan confirmed the Phase 3 decisions (2026-10-03).
-- [ ] Evan: review the column docs against the data (blocks merging PR #29).
+- [x] Evan reviewed the column docs (2026-10-04): accepted as good enough, fix on encounter.
 - [x] Adversarial review (Opus correctness + Sonnet security):
       `reviews/2026-10-03-tiresias-all-domains.md`. Fixed C1–C15 and S1 (enforced query
       timeout); crime map sample excluded; gold 33 → 36. **Live eval 36/36.**
