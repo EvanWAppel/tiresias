@@ -1,3 +1,3 @@
 # BLOCKED — what I need from Evan
 
-Nothing blocked right now.
+- [ ] 🔴 **Approve publishing this repo (E0)** — the local repo at `~/Documents/portfolio/tiresias` holds 22 commits (Tiresias history split from Elvis plus the Requirements commit) and has passed a pre-publish safety scan (2026-10-04): gitleaks and trufflehog found nothing across all history, there are no `.env`/key/data/binary files, commit identities use the GitHub noreply address, only `main` exists, and private references were removed from the current files. Skim `PRD.md`, then tell Claude to publish: it creates public `EvanWAppel/tiresias`, pushes `main`, and applies the standard branch protection (PR required, 0 approvals, dismiss stale reviews, no force-push/deletion, `enforce_admins: false`). The name is free because the old private repo was renamed to `tiresias-tools` on 2026-10-04.
