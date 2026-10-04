@@ -1,11 +1,50 @@
 # Tiresias — Task Board
 
-Small, checkboxed steps driven from `TIRESIAS-PRD.md` (RECL: Requirements → tasks).
-Work off a feature branch; **do not commit/push without Evan's say-so.**
+Small, checkboxed steps driven from `PRD.md` (ROCRLL). Work on feature branches;
+`main` is protected. Phases 0–3 below were built inside Elvis (history preserved);
+the extraction phases E0–E5 make the engine a standalone, config-driven library.
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/decision
 
 ---
+
+## Extraction — standalone library (2026-10-04)
+
+### E0 — Extract
+- [x] History split from Elvis with `git filter-repo` (21 commits, Phases 0–3).
+      Elvis's untracked planning brief is not carried over; this repo's
+      `PRD.md` is engineering-only.
+- [x] Scanned every historical blob for secrets/private strings before publishing.
+- [ ] Create public `EvanWAppel/tiresias`; push; apply standard branch protection.
+
+### E1 — Config-driven engine
+- [ ] `tiresias.yml` schema (Pydantic): city, blurb, paths, tables, map-only
+      columns, examples, metrics path, gold paths, threshold, limits.
+- [ ] Remove Elvis specifics from `tiresias/` (allowlist, prompts, exemplars,
+      abstain message); a test fails on any city string in the package.
+
+### E2 — Hermetic tests + CI
+- [ ] Synthetic fixture warehouse + minimal dbt artifacts in `conftest.py`.
+- [ ] Port the guard / timeout / map-only / retrieval / agent / MCP tests to it.
+- [ ] CI: ruff, ty, pytest (no network, no key).
+
+### E3 — Packaging, CLI, Streamlit extra
+- [ ] `pyproject.toml` (Python 3.12), `tiresias[streamlit]` extra.
+- [ ] CLI: `tiresias mcp`, `tiresias eval`, `tiresias calibrate`.
+- [ ] `render_chat(config)` with the abuse guards; README; tag `v0.1.0`.
+
+### E4 — Elvis adopts v0.1.0
+- [ ] Elvis: delete `tiresias/`, add `tiresias.yml` + examples/metrics/gold;
+      pin `v0.1.0`; live eval 36/36; deploy.
+
+### E5 — Sibling cities
+- [ ] robbins (decide: replace or sit alongside `nl_sql.py`).
+- [ ] gregan (column docs first).
+- [ ] groening (column docs first).
+
+---
+
+## History — built inside Elvis
 
 ## Phase 0 — vertical slice (restaurant inspections, whole stack, deployed)
 
@@ -163,7 +202,7 @@ Phase-0 domain (restaurant marts), expand outward.
       catalog (44 tests green).
 - [ ] (Stretch, per PRD Open decision #2) evaluate MetricFlow / dbt Semantic Layer.
 
-### P1.3 — Snowflake dual-target (folds in RECRUITER-PRIMER P3)
+### P1.3 — Snowflake dual-target
 - [ ] Add a `snow` target to `profiles.yml`; guard DuckDB-specific SQL with
       `{{ target.type }}` / macros; `dbt parse --target snow` succeeds.
 - [ ] Write `docs/SNOWFLAKE.md`. Keep `dev`/DuckDB the default.

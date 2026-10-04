@@ -2,7 +2,7 @@
 
 The corpus is deliberately small — the allowlisted marts, the governed metrics,
 and a set of natural-language exemplars per domain — so an in-memory cosine index
-is the honest, un-over-engineered choice (see TIRESIAS-PRD "Open decisions" #1).
+is the honest, un-over-engineered choice at this corpus size.
 Retrieval returns *schema and metric context*, not prose, so the agent drafts SQL
 grounded in real columns and blessed metrics.
 
