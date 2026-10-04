@@ -77,9 +77,17 @@ def test_fastembed_backend_end_to_end(catalog: Catalog, registry: MetricRegistry
         pytest.skip(f"fastembed model unavailable: {exc}")
 
     assert retriever.is_grounded("which restaurants fail inspection most often?") is True
-    assert retriever.is_grounded("how many police calls happened in 2024?") is True
+    assert retriever.is_grounded("how many police calls were there each month?") is True
     assert retriever.is_grounded("what's the best laptop to buy?") is False
     # Hybrid surfaces the violations context via the table doc, its metric, or the
     # matching exemplar — any top hit that points at mart_top_violations counts.
     hits = retriever.retrieve("most common health code violations", k=3)
     assert any("mart_top_violations" in h.doc.ref for h in hits)
+
+
+def test_exemplar_grounds_name_real_tables(catalog: Catalog, registry: MetricRegistry) -> None:
+    # Every exemplar must point at tables that exist in the allowlisted catalog.
+    known = set(catalog.table_names) | set(registry.names)
+    for doc in build_corpus(catalog=catalog, registry=registry):
+        assert doc.grounds, doc.doc_id
+        assert set(doc.grounds) <= known, (doc.doc_id, doc.grounds)

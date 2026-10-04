@@ -11,7 +11,7 @@ These are live tests (they call the Anthropic API), so the whole module skips wh
 ``ANTHROPIC_API_KEY`` or the warehouse is absent — keeping CI hermetic while giving
 a one-command local acceptance run:  ``uv run pytest tiresias/evals -m eval``.
 
-An LLM-judge layer is deferred to Phase 4; Phase 0 uses deterministic/structural
+An LLM-judge layer is deferred to Phase 4; this harness uses deterministic/structural
 checks only.
 """
 
@@ -63,4 +63,8 @@ async def test_gold_case(agent: TiresiasAgent, case: dict) -> None:
     for table in case.get("must_reference", []):
         assert table in result.citations, (
             f"{case['id']}: expected {table} in citations {result.citations}"
+        )
+    for fragment in case.get("sql_must_contain", []):
+        assert fragment.lower() in result.sql.lower(), (
+            f"{case['id']}: expected {fragment!r} in SQL {result.sql!r}"
         )

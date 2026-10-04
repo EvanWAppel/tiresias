@@ -4,7 +4,7 @@
 # Every metric is traceable to a real mart column so answers stay grounded — the
 # expression here is lifted verbatim from the dbt model, it does not reinvent math.
 #
-# Phase 0 ships exactly one metric (restaurant inspections); later phases append.
+# Restaurant-inspection metrics today; other domains append metrics one at a time.
 version: 1
 metrics:
   - name: restaurant_failure_rate

@@ -39,116 +39,147 @@ RRF_K = 60
 # borderline cases are passed through to the planner — which sees the full schema
 # and is the authoritative abstain decider. Recalibrated for the all-domains corpus
 # (default fastembed BAAI/bge-small-en-v1.5): generic off-topic questions measured
-# 0.43-0.555, answerable questions across every domain 0.598-0.83; 0.56 sits at
-# the top of the off-topic band, keeping ~0.04 margin below the lowest answerable.
+# 0.43-0.555, answerable questions across every domain 0.61-0.83, and subtle
+# unanswerable ones (forecasts, home prices, "violent crimes downtown", an
+# out-of-period year) 0.575-0.68 — inside the answerable band. 0.56 only screens
+# out the generic band (~0.05 below the lowest answerable); for everything else the
+# planner does the abstain work.
 GROUNDING_THRESHOLD = 0.56
 
-# NL question -> the tables/metric that answer it. These teach retrieval the mapping
-# from how people ask to what actually holds the answer.
-EXEMPLARS: tuple[tuple[str, str], ...] = (
+# NL question -> guidance -> the tables/metrics it grounds to. These teach retrieval
+# the mapping from how people ask to what actually holds the answer. The third
+# element is the structured grounding target (the guidance prose may mention other
+# tables, e.g. to disambiguate, without grounding to them).
+EXEMPLARS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "Which restaurants fail health inspections most often?",
         "Use mart_restaurants with the restaurant_failure_rate metric (failure_rate_pct).",
+        ("mart_restaurants", "restaurant_failure_rate"),
     ),
     (
         "What are the most common health code violations?",
         "Use mart_top_violations, ranked by occurrence_count.",
+        ("mart_top_violations",),
     ),
     (
         "How have restaurant inspection counts changed over time?",
         "Use mart_inspections_over_time, grouped by inspection_month.",
+        ("mart_inspections_over_time",),
     ),
     (
         "What specific violations did a restaurant receive?",
         "Use mart_inspection_violations joined to mart_restaurants on permit_number.",
+        ("mart_inspection_violations", "mart_restaurants"),
     ),
     (
         "What is the inspection failure rate for a restaurant?",
         "Use the restaurant_failure_rate metric on mart_restaurants.failure_rate_pct.",
+        ("restaurant_failure_rate", "mart_restaurants"),
     ),
     (
         "How many restaurants have been closed by the health district?",
         "Use mart_restaurants (closures, failed_inspections). Road closures are a different domain (mart_road_construction).",
+        ("mart_restaurants",),
     ),
     (
         "How many police calls were there per month?",
         "Use mart_crime_monthly (incident_month, incident_count). These are LVMPD calls for service, not confirmed crimes.",
+        ("mart_crime_monthly",),
     ),
     (
         "What are the most common types of police calls?",
         "Use mart_crime_by_type, ranked by incident_count.",
+        ("mart_crime_by_type",),
     ),
     (
         "What hour of the day has the most police calls?",
         "Use mart_crime_by_hour_weekday, summing incident_count by hour_of_day.",
+        ("mart_crime_by_hour_weekday",),
     ),
     (
         "How many building permits were issued and what were they worth?",
         "Use mart_permits_monthly or mart_permits_by_type (permit_count, total_valuation) for Las Vegas; mart_henderson_permits for Henderson.",
+        ("mart_permits_monthly", "mart_permits_by_type", "mart_henderson_permits"),
     ),
     (
         "How many visitors came to Las Vegas each month?",
         "Use mart_lvcva_indicators where metric ILIKE 'Visitor Volume'.",
+        ("mart_lvcva_indicators",),
     ),
     (
         "How has gaming revenue changed over time?",
-        "Use mart_lvcva_indicators where metric ILIKE 'Gaming Revenue%'.",
+        "Use mart_lvcva_indicators where metric ILIKE 'Gaming Revenue%'; exclude ILIKE '%Clark County%' when summing areas (it is the county total), or use only the Clark County row for a county-wide figure.",
+        ("mart_lvcva_indicators",),
     ),
     (
         "How many 110 degree days were there each year?",
         "Use mart_weather_extreme_days (days_110f_plus by observed_year).",
+        ("mart_weather_extreme_days",),
     ),
     (
         "What was the hottest month on record?",
         "Use mart_weather_monthly ordered by record_high_f or avg_high_f.",
+        ("mart_weather_monthly",),
     ),
     (
         "How bad is the air quality in Las Vegas?",
         "Use mart_air_quality_monthly or mart_air_quality_daily (AQI by parameter).",
+        ("mart_air_quality_monthly", "mart_air_quality_daily"),
     ),
     (
         "How low has Lake Mead's water level dropped?",
         "Use mart_lake_mead_monthly (min_elevation_ft, avg_elevation_ft by reading_month).",
+        ("mart_lake_mead_monthly",),
     ),
     (
         "Which day of the year has the most weddings?",
         "Use mart_marriage_daily, summing license_count by month_of_year and day_of_month.",
+        ("mart_marriage_daily",),
     ),
     (
         "Where do couples who marry in Las Vegas come from?",
         "Use mart_marriage_by_origin ranked by license_count.",
+        ("mart_marriage_by_origin",),
     ),
     (
         "How many same-sex marriages are there each year?",
         "Use mart_marriage_by_gender_year where couple_type = 'Same-sex'.",
+        ("mart_marriage_by_gender_year",),
     ),
     (
         "How many short-term rentals (Airbnbs) are there in each city?",
         "Use mart_short_term_rentals grouped by jurisdiction.",
+        ("mart_short_term_rentals",),
     ),
     (
         "Which roads have active construction or closures?",
-        "Use mart_road_construction (road_name, status, start_date, end_date, is_full_closure).",
+        "Use mart_road_construction (road_name, status, start_date, end_date); count distinct project_name for projects. is_full_closure is set only on NDOT 511 rows.",
+        ("mart_road_construction",),
     ),
     (
         "Which parks are largest or have water features?",
         "Use mart_parks (acres, has_water, jurisdiction).",
+        ("mart_parks",),
     ),
     (
         "Which artists have the most public art pieces?",
         "Use mart_public_art_metro (Las Vegas + Henderson) grouped by artist.",
+        ("mart_public_art_metro",),
     ),
     (
         "Which apartment complexes have the most fire code violations?",
         "Use mart_fire_prevention_inspections ranked by total_violations.",
+        ("mart_fire_prevention_inspections",),
     ),
     (
         "Which census tracts have the most police calls per resident?",
         "Use mart_tract_metrics where topic = 'calls', ranked by rate_per_1000 (null unless coverage = 'available').",
+        ("mart_tract_metrics",),
     ),
     (
         "What kinds of business licenses does Henderson issue?",
         "Use mart_henderson_licenses_by_type (license_count, active_count).",
+        ("mart_henderson_licenses_by_type",),
     ),
 )
 
@@ -192,6 +223,7 @@ class RetrievedDoc(BaseModel):
     kind: str  # "table" | "metric" | "exemplar"
     ref: str  # the table or metric name this doc grounds to
     text: str
+    grounds: tuple[str, ...] = ()  # exact table/metric names this doc points at
 
 
 class RetrievalHit(BaseModel):
@@ -217,6 +249,7 @@ def build_corpus(
                 kind="table",
                 ref=table.name,
                 text=table.to_prompt(),
+                grounds=(table.name,),
             )
         )
     for metric in registry.metrics:
@@ -230,15 +263,17 @@ def build_corpus(
                     f"Grain: {metric.grain}. Expression: {metric.expression}. "
                     f"Grounded in: {', '.join(metric.references)}."
                 ),
+                grounds=(metric.name, metric.source_table),
             )
         )
-    for i, (question, answer) in enumerate(EXEMPLARS):
+    for i, (question, answer, tables) in enumerate(EXEMPLARS):
         docs.append(
             RetrievedDoc(
                 doc_id=f"exemplar:{i}",
                 kind="exemplar",
                 ref=answer,
                 text=f"Q: {question}\nA: {answer}",
+                grounds=tables,
             )
         )
     return tuple(docs)

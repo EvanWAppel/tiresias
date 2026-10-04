@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from tiresias.catalog import Catalog
-from tiresias.config import ALLOWED_TABLES, EXCLUDED_TABLES
+from tiresias.config import ALLOWED_TABLES, EXCLUDED_TABLES, TiresiasSettings
 
 
 def test_catalog_is_bounded_to_allowlist(catalog: Catalog) -> None:
@@ -33,15 +35,25 @@ def test_catalog_spans_every_civic_domain(catalog: Catalog) -> None:
         assert table in names
 
 
-def test_internal_audit_mart_is_excluded(catalog: Catalog) -> None:
-    assert "mart_tract_assignment_audit" in EXCLUDED_TABLES
-    assert "mart_tract_assignment_audit" not in catalog.table_names
+def test_every_built_mart_is_classified(settings: TiresiasSettings, catalog: Catalog) -> None:
+    # A new mart must be deliberately opted in or out: the built mart_* set has to
+    # equal ALLOWED | EXCLUDED, and the two must not overlap.
+    built = {
+        node["metadata"]["name"]
+        for node in json.loads(settings.catalog_path.read_text())["nodes"].values()
+        if node["metadata"]["name"].startswith("mart_")
+    }
+    assert not set(ALLOWED_TABLES) & EXCLUDED_TABLES
+    assert built == set(ALLOWED_TABLES) | EXCLUDED_TABLES
 
 
-def test_every_allowlisted_mart_is_built(catalog: Catalog) -> None:
-    # A stale allowlist entry (renamed/disabled mart) should fail loudly, not
-    # silently shrink the agent's world.
-    assert len(catalog.tables) == len(ALLOWED_TABLES)
+@pytest.mark.parametrize(
+    "table", ["mart_tract_assignment_audit", "mart_crime_map_sample"]
+)
+def test_non_analytic_marts_are_not_queryable(catalog: Catalog, table: str) -> None:
+    # Audit bookkeeping and the random map sample (~1% of calls) would mislead counts.
+    assert table in EXCLUDED_TABLES
+    assert table not in catalog.table_names
 
 
 def test_every_column_is_documented(catalog: Catalog) -> None:

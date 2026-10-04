@@ -5,7 +5,8 @@
 # *and* correct refusal — abstention is a first-class, tested behavior.
 #
 # expect: "answer"  -> must not abstain; SQL must run; any `must_reference` tables
-#                      must appear in the citations.
+#                      must appear in the citations; any `sql_must_contain`
+#                      fragments must appear in the executed SQL (case-insensitive).
 # expect: "abstain" -> must abstain (retrieval gate or planner decision).
 version: 1
 cases:
@@ -96,8 +97,8 @@ cases:
     question: How many short-term rentals are there in each jurisdiction?
     expect: answer
     must_reference: [mart_short_term_rentals]
-  - id: road_full_closures
-    question: How many road construction projects are full road closures?
+  - id: henderson_road_projects
+    question: How many distinct road construction projects does Henderson have?
     expect: answer
     must_reference: [mart_road_construction]
   - id: parks_with_water
@@ -116,6 +117,12 @@ cases:
     question: Which census tracts have the highest rate of police calls per 1,000 residents?
     expect: answer
     must_reference: [mart_tract_metrics]
+  - id: tract_zero_parks
+    # A zero is only real where coverage is 'available'; the SQL must respect it.
+    question: How many census tracts have no parks at all?
+    expect: answer
+    must_reference: [mart_tract_metrics]
+    sql_must_contain: [coverage]
 
   # --- unanswerable (must abstain) ---
   - id: ood_weather
@@ -138,4 +145,13 @@ cases:
     expect: abstain
   - id: ood_live_traffic
     question: Is there a traffic jam on I-15 right now?
+    expect: abstain
+  - id: ood_crimes_downtown
+    # Calls for service are not confirmed crimes, and no allowed table has a
+    # "downtown" geography (the random map sample is excluded).
+    question: How many violent crimes were reported downtown last year?
+    expect: abstain
+  - id: out_of_period_crime
+    # Crime calls are loaded for 2025-2026 only; a 2019 count would be a false zero.
+    question: How many police calls were there in 2019?
     expect: abstain

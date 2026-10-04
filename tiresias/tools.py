@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 
+import duckdb
 from pydantic import BaseModel
 
 from tiresias import db
@@ -24,6 +26,10 @@ from tiresias.metrics import Metric, load_registry
 from tiresias.sql_guard import guard_sql
 
 logger = logging.getLogger(__name__)
+
+
+class QueryTimeoutError(Exception):
+    """A validated query exceeded ``statement_timeout_s`` and was interrupted."""
 
 
 class QueryResult(BaseModel):
@@ -45,12 +51,34 @@ def run_validated_sql(
     """Guard, validate, and execute ``sql`` read-only; return JSON-safe rows.
 
     Raises ``tiresias.sql_guard.SqlGuardError`` if the SQL violates the policy or
-    fails catalog validation — errors are never swallowed.
+    fails catalog validation, and :class:`QueryTimeoutError` if execution exceeds
+    ``settings.statement_timeout_s`` — errors are never swallowed.
     """
     conn = db.get_connection(settings.db_path)
     safe = guard_sql(sql, settings=settings, connection=conn)
 
-    frame = conn.cursor().execute(safe.sql).df()
+    # A per-query cursor plus a watchdog that interrupts it: a Python signal cannot
+    # preempt DuckDB's native execution, but ``interrupt()`` can. This is the real
+    # cost cap behind the row cap (an unfiltered cross-join aggregate defeats limit
+    # pushdown and would otherwise run for minutes).
+    cursor = conn.cursor()
+    watchdog = threading.Timer(settings.statement_timeout_s, cursor.interrupt)
+    watchdog.start()
+    try:
+        frame = cursor.execute(safe.sql).df()
+    except duckdb.InterruptException as exc:
+        logger.warning(
+            "run_validated_sql interrupted after %.1fs: %s",
+            settings.statement_timeout_s,
+            safe.sql,
+        )
+        raise QueryTimeoutError(
+            f"query timed out after {settings.statement_timeout_s}s; "
+            "narrow it (filter, aggregate a single table, avoid cross joins)"
+        ) from exc
+    finally:
+        watchdog.cancel()
+        cursor.close()
     # to_json handles numpy/date coercion; round-trip to get JSON-safe Python values.
     # (to_json returns str when no path is given; `or "[]"` satisfies the typechecker.)
     records = tuple(json.loads(frame.to_json(orient="records", date_format="iso") or "[]"))

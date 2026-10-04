@@ -54,3 +54,29 @@ case-varied and quoted identifiers; comments; `COPY`; `INSTALL`/`LOAD`; `SET`;
 qualification. There is no prompt-injection path to an action: the graph runs a
 single query and a single synthesis. Nothing leaks to the UI, and the abuse
 caps still bound spend.
+
+## Outcomes (Loop)
+
+All "Fix" decisions are implemented in the Loop commit. Verification: 62 unit
+tests and 24 app tests green; ruff and ty clean; `dbt build --select marts`
+PASS=87 with WARN=1 (the road end-after-start warning, which predates this
+change); live eval **36/36** (Opus 4.8).
+
+| # | Outcome |
+|---|---|
+| C1 | Road docs rewritten per source (grain = segment; `is_full_closure` NDOT-only); gold case replaced with `henderson_road_projects`; road exemplar updated. |
+| C2 | `mart_crime_map_sample` moved to `EXCLUDED_TABLES` (29 queryable marts). |
+| C3 | `record_count` doc matches the SQL; new gold case `tract_zero_parks` requires `coverage` in the SQL (new `sql_must_contain` check). |
+| C4 | Gaming exemplar and `metric` doc: exclude the Clark County total when summing; colon optional. |
+| C5 | STR docs per jurisdiction. |
+| C6 | Coverage periods in crime/marriage/air-quality descriptions; planner told to abstain outside a table's period; gold `out_of_period_crime`. |
+| C7 | Gold `ood_crimes_downtown` restored as an abstain case. |
+| C8 | Exact 'PM2.5'/'Ozone' values; per-pollutant units; no cross-parameter comparison. |
+| C9, C10, C11 | Docs corrected per source. |
+| C12 | Test: every built `mart_*` is in exactly one of ALLOWED / EXCLUDED; duplicate tests removed. |
+| C13 | Exemplars carry structured `grounds`; recall matches exactly (still 21/21). A test requires every corpus doc to ground to real tables/metrics. |
+| C14 | Stale "Phase 0" text removed (provider, metrics, metrics.yml, mcp_server, sql_guard, evals). |
+| C15 | Recalibrated: generic off-topic 0.43–0.555, answerable 0.61–0.83, subtle unanswerable 0.575–0.68. Threshold stays 0.56; comment states the planner does the borderline work. |
+| S1 | Watchdog `threading.Timer` → `cursor.interrupt()` at `statement_timeout_s` (15s), raising `QueryTimeoutError` (DuckDB error chained); MCP returns `{ok: false}`. Tests: a runaway 3-way cross join is cut off at 0.5s, fast queries are unaffected, the connection stays usable, and a timeout over MCP is structured. |
+| S2 | Pending Evan's decision (see `BLOCKED.md`). |
+| S3 | No change. |

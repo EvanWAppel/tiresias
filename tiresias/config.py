@@ -37,7 +37,6 @@ ALLOWED_TABLES: tuple[str, ...] = (
     "mart_crime_by_type",
     "mart_crime_by_hour_weekday",
     "mart_crime_monthly",
-    "mart_crime_map_sample",
     # Building permits + business licenses
     "mart_permits_monthly",
     "mart_permits_by_type",
@@ -64,9 +63,14 @@ ALLOWED_TABLES: tuple[str, ...] = (
     "mart_tract_metrics",
 )
 
-# Built marts deliberately kept out of scope. The audit mart is internal QA
-# bookkeeping for tract assignment, not a civic dataset.
-EXCLUDED_TABLES: frozenset[str] = frozenset({"mart_tract_assignment_audit"})
+# Built marts deliberately kept out of scope (a test requires every built mart_*
+# to be in exactly one of ALLOWED_TABLES / EXCLUDED_TABLES):
+#   - mart_tract_assignment_audit: internal QA bookkeeping, not a civic dataset.
+#   - mart_crime_map_sample: a random ~12k-row sample (~1% of calls) for the map;
+#     any count or total from it would be a silent undercount.
+EXCLUDED_TABLES: frozenset[str] = frozenset(
+    {"mart_tract_assignment_audit", "mart_crime_map_sample"}
+)
 
 
 class TiresiasSettings(BaseModel):
@@ -91,9 +95,8 @@ class TiresiasSettings(BaseModel):
 
     # Hard row cap injected into every executed query (defense against runaway scans).
     max_rows: int = 1000
-    # Reserved cost cap (seconds). Not yet enforced in Phase 0 — the row cap,
-    # read-only connection, and allowlist are the active guards; wire a real query
-    # timeout in a later phase.
+    # Wall-clock cap (seconds) on executing a validated query; enforced in
+    # tools.run_validated_sql by a watchdog that interrupts the DuckDB cursor.
     statement_timeout_s: float = 15.0
 
 

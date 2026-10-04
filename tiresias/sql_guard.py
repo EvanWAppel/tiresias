@@ -111,7 +111,7 @@ def guard_sql(
         schema = table.db  # schema qualifier, "" if unqualified
         if name not in settings.allowed_tables:
             raise SqlGuardError(
-                f"table {name!r} is not in the Phase-0 allowlist "
+                f"table {name!r} is not in the allowlist "
                 f"{sorted(settings.allowed_tables)}"
             )
         if schema and schema not in settings.allowed_schemas:

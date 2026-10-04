@@ -1,6 +1,6 @@
 """Tiresias MCP server — the governed, read-only surface over the warehouse.
 
-Exposes the Phase-0 grounding surface as MCP:
+Exposes the Tiresias grounding surface as MCP:
 
   * Resources: the in-scope table catalog and the governed metric registry.
   * Tool: ``run_validated_sql`` — SELECT-only, allowlisted, row-capped, and
@@ -75,7 +75,7 @@ def build_server() -> MCPServer:
     def run_validated_sql(sql: str) -> dict[str, Any]:
         try:
             result = tools.run_validated_sql(sql)
-        except SqlGuardError as exc:
+        except (SqlGuardError, tools.QueryTimeoutError) as exc:
             logger.info("run_validated_sql rejected a query: %s", exc)
             return {"ok": False, "error": str(exc)}
         return {"ok": True, **result.model_dump()}

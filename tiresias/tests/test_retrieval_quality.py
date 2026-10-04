@@ -37,8 +37,13 @@ def test_hybrid_retrieval_recall_at_k(
     k = GOLD["k"]
     hits = []
     for case in GOLD["cases"]:
-        refs = " ".join(h.doc.ref for h in retriever.retrieve(case["query"], k=k))
-        ok = any(expected in refs for expected in case["expect_any"])
+        # Exact match on each hit's structured grounding targets — not substring
+        # search over prose, which let an exemplar that merely *mentions* a table
+        # count as a hit for it.
+        grounds = {
+            g for h in retriever.retrieve(case["query"], k=k) for g in h.doc.grounds
+        }
+        ok = any(expected in grounds for expected in case["expect_any"])
         hits.append(ok)
         if not ok:
             print(f"MISS: {case['query']!r} -> expected any of {case['expect_any']}")

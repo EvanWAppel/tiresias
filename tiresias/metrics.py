@@ -1,6 +1,6 @@
 """Governed metric registry — typed loader over ``metrics.yml``.
 
-The registry is the semantic layer's Phase-0 form: canonical, grounded metric
+The registry is the semantic layer's YAML form: canonical, grounded metric
 definitions the agent is required to use instead of improvising arithmetic. It is
 also surfaced as an MCP resource (see ``tiresias/mcp_server.py``).
 """
