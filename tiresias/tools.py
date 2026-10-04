@@ -32,6 +32,10 @@ class QueryTimeoutError(Exception):
     """A validated query exceeded ``statement_timeout_s`` and was interrupted."""
 
 
+class ResultTooLargeError(Exception):
+    """A validated query's serialized result exceeded ``max_result_bytes``."""
+
+
 class QueryResult(BaseModel):
     """The outcome of a validated, read-only query."""
 
@@ -81,7 +85,16 @@ def run_validated_sql(
         cursor.close()
     # to_json handles numpy/date coercion; round-trip to get JSON-safe Python values.
     # (to_json returns str when no path is given; `or "[]"` satisfies the typechecker.)
-    records = tuple(json.loads(frame.to_json(orient="records", date_format="iso") or "[]"))
+    payload = frame.to_json(orient="records", date_format="iso") or "[]"
+    if len(payload) > settings.max_result_bytes:
+        logger.warning(
+            "run_validated_sql result too large (%d bytes): %s", len(payload), safe.sql
+        )
+        raise ResultTooLargeError(
+            f"result too large ({len(payload)} bytes > {settings.max_result_bytes}); "
+            "select fewer or narrower columns, or aggregate"
+        )
+    records = tuple(json.loads(payload))
     row_count = len(frame)
 
     logger.info("run_validated_sql returned %d rows from %s", row_count, safe.tables)

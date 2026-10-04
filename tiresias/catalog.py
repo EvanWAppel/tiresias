@@ -16,7 +16,7 @@ import logging
 
 from pydantic import BaseModel
 
-from tiresias.config import DEFAULT_SETTINGS, TiresiasSettings
+from tiresias.config import DEFAULT_SETTINGS, MAP_ONLY_COLUMNS, TiresiasSettings
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,8 @@ class Catalog(BaseModel):
 def load_catalog(settings: TiresiasSettings = DEFAULT_SETTINGS) -> Catalog:
     """Build the bounded catalog from the dbt artifacts.
 
-    Only tables in ``settings.allowed_tables`` are included. Raises if the artifacts
+    Only tables in ``settings.allowed_tables`` are included, minus their map-only
+    columns (``MAP_ONLY_COLUMNS``). Raises if the artifacts
     are missing (a clear instruction to run ``dbt docs generate``) or yield no
     allowed tables (a scope/config mismatch worth failing loudly on).
     """
@@ -112,6 +113,8 @@ def load_catalog(settings: TiresiasSettings = DEFAULT_SETTINGS) -> Catalog:
                 or "",
             )
             for col in sorted(node["columns"].values(), key=lambda c: c["index"])
+            # Map-only geometry is not part of the agent's world (see config).
+            if col["name"] not in MAP_ONLY_COLUMNS.get(name, frozenset())
         )
         tables.append(
             Table(

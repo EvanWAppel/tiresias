@@ -43,7 +43,7 @@ STRs are City or unincorporated-county licenses; exact LVCVA metric spellings.
 | # | Sev | Finding | Verified against | Decision |
 |---|---|---|---|---|
 | S1 | med | `statement_timeout_s` is declared but never enforced. A guard-approved aggregate over a 3-way cross join ran more than 4 minutes. The gap predates this change; the widening makes it easier to hit. | `config.py:97` (no readers) | Fix in this PR: watchdog + `conn.interrupt()` |
-| S2 | low-med | Large map JSON columns (`geometry_json` ≤ ~320 KB/row, `path_json`) are selectable; the "do not select" note is a hint, not a rule. | guard is table-level only | Pending Evan |
+| S2 | low-med | Large map JSON columns (`geometry_json` ≤ ~320 KB/row, `path_json`) are selectable; the "do not select" note is a hint, not a rule. | guard is table-level only | Fix: option (a), hide + reject |
 | S3 | info | Alias spoofing is cosmetic only; the guard resolves real table names. | fuzzing | No change |
 
 **Attacks tried and correctly blocked (~45):** CTE/subquery shadowing; `read_csv*`
@@ -78,5 +78,5 @@ change); live eval **36/36** (Opus 4.8).
 | C14 | Stale "Phase 0" text removed (provider, metrics, metrics.yml, mcp_server, sql_guard, evals). |
 | C15 | Recalibrated: generic off-topic 0.43–0.555, answerable 0.61–0.83, subtle unanswerable 0.575–0.68. Threshold stays 0.56; comment states the planner does the borderline work. |
 | S1 | Watchdog `threading.Timer` → `cursor.interrupt()` at `statement_timeout_s` (15s), raising `QueryTimeoutError` (DuckDB error chained); MCP returns `{ok: false}`. Tests: a runaway 3-way cross join is cut off at 0.5s, fast queries are unaffected, the connection stays usable, and a timeout over MCP is structured. |
-| S2 | Pending Evan's decision (see `BLOCKED.md`). |
+| S2 | Evan chose option (a). `MAP_ONLY_COLUMNS` (`geometry_json`, `path_json`) are hidden from the catalog and rejected by the guard: direct references (any case/quoting, inside CTEs/functions), whole-row struct references (`select t from ... t`), and star/`COLUMNS()` expansion (checked with DuckDB `DESCRIBE`, which plans the query without running it). Backstop: a 256 KB cap on serialized results (`ResultTooLargeError`, `{ok: false}` over MCP). 18 new tests; the 3 live tract/road cases still pass. |
 | S3 | No change. |

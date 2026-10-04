@@ -5,6 +5,8 @@ guard uses a real parser (sqlglot, DuckDB dialect) rather than regex so it can:
 
   * reject anything that is not a single SELECT (no DDL/DML, no multi-statement),
   * restrict table/schema references to an allowlist,
+  * reject map-only geometry columns (directly, via star expansion, or as a
+    whole-row struct),
   * inject a hard row cap, and
   * validate the query against the live catalog via EXPLAIN (catching hallucinated
     columns/tables before execution).
@@ -23,7 +25,7 @@ import sqlglot
 from pydantic import BaseModel
 from sqlglot import exp
 
-from tiresias.config import DEFAULT_SETTINGS, TiresiasSettings
+from tiresias.config import DEFAULT_SETTINGS, MAP_ONLY_COLUMNS, TiresiasSettings
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,53 @@ def _effective_limit(tree: exp.Expression, max_rows: int) -> int:
     except (AttributeError, ValueError):
         return max_rows
     return min(requested, max_rows)
+
+
+def _map_only_names(referenced: set[str]) -> frozenset[str]:
+    return frozenset().union(*(MAP_ONLY_COLUMNS.get(t, frozenset()) for t in referenced))
+
+
+def _reject_map_only_references(tree: exp.Expression, referenced: set[str]) -> None:
+    """Reject direct references to map-only columns, and whole-row references.
+
+    DuckDB lets a bare table name or alias stand for the entire row as a STRUCT
+    (``select t from mart_tract_metrics t``), which would smuggle the geometry
+    out, so a column reference that names a map-only table or its alias is
+    rejected too.
+    """
+    blocked = _map_only_names(referenced)
+    if not blocked:
+        return
+    row_names = {
+        name.lower()
+        for table in tree.find_all(exp.Table)
+        if table.name in MAP_ONLY_COLUMNS
+        for name in (table.name, table.alias)
+        if name
+    }
+    for column in tree.find_all(exp.Column):
+        name = column.name.lower()
+        if name in {b.lower() for b in blocked}:
+            raise SqlGuardError(
+                f"column {column.name!r} is map-only geometry and cannot be queried"
+            )
+        if not column.table and name in row_names:
+            raise SqlGuardError(
+                f"{column.name!r} selects a whole row including map-only geometry; "
+                "name the columns you need"
+            )
+
+
+def _reject_map_only_output(described: list[tuple], referenced: set[str]) -> None:
+    """Reject if the planned output exposes a map-only column (by name or nested)."""
+    blocked = {b.lower() for b in _map_only_names(referenced)}
+    for row in described:
+        column_name, column_type = str(row[0]).lower(), str(row[1]).lower()
+        if any(b in column_name or b in column_type for b in blocked):
+            raise SqlGuardError(
+                f"output column {row[0]!r} exposes map-only geometry; "
+                "list the columns you need instead of * / COLUMNS()"
+            )
 
 
 def guard_sql(
@@ -121,6 +170,8 @@ def guard_sql(
     if not referenced:
         raise SqlGuardError("query references no allowed table")
 
+    _reject_map_only_references(tree, referenced)
+
     row_cap = _effective_limit(tree, settings.max_rows)
     guarded = tree.limit(row_cap)
     final_sql = guarded.sql(dialect="duckdb")
@@ -128,8 +179,12 @@ def guard_sql(
     if connection is not None:
         try:
             connection.cursor().execute(f"EXPLAIN {final_sql}")
+            # DESCRIBE plans the query (no execution) and reports its output
+            # columns — catching star / COLUMNS() expansion of map-only columns.
+            described = connection.cursor().execute(f"DESCRIBE {final_sql}").fetchall()
         except duckdb.Error as exc:
             raise SqlGuardError(f"query failed catalog validation: {exc}") from exc
+        _reject_map_only_output(described, referenced)
 
     logger.debug("Guarded SQL (cap=%d, tables=%s): %s", row_cap, sorted(referenced), final_sql)
     return SafeSql(sql=final_sql, tables=tuple(sorted(referenced)), row_cap=row_cap)

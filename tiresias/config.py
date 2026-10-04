@@ -72,6 +72,16 @@ EXCLUDED_TABLES: frozenset[str] = frozenset(
     {"mart_tract_assignment_audit", "mart_crime_map_sample"}
 )
 
+# Map-only geometry columns inside allowed tables: hidden from the agent's catalog
+# and rejected by the SQL guard. They hold JSON shapes for the map pages (tract
+# boundaries up to ~320 KB per row), carry no analytic meaning, and would bloat
+# results and prompts. The Streamlit map pages read the warehouse directly and are
+# unaffected.
+MAP_ONLY_COLUMNS: dict[str, frozenset[str]] = {
+    "mart_tract_metrics": frozenset({"geometry_json"}),
+    "mart_road_construction": frozenset({"path_json"}),
+}
+
 
 class TiresiasSettings(BaseModel):
     """Read-only execution guardrails for the validated SQL tool.
@@ -95,6 +105,9 @@ class TiresiasSettings(BaseModel):
 
     # Hard row cap injected into every executed query (defense against runaway scans).
     max_rows: int = 1000
+    # Backstop on the serialized result (bytes): catches oversized payloads from any
+    # shape of query the guard's column checks don't anticipate.
+    max_result_bytes: int = 256_000
     # Wall-clock cap (seconds) on executing a validated query; enforced in
     # tools.run_validated_sql by a watchdog that interrupts the DuckDB cursor.
     statement_timeout_s: float = 15.0

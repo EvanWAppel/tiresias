@@ -75,7 +75,7 @@ def build_server() -> MCPServer:
     def run_validated_sql(sql: str) -> dict[str, Any]:
         try:
             result = tools.run_validated_sql(sql)
-        except (SqlGuardError, tools.QueryTimeoutError) as exc:
+        except (SqlGuardError, tools.QueryTimeoutError, tools.ResultTooLargeError) as exc:
             logger.info("run_validated_sql rejected a query: %s", exc)
             return {"ok": False, "error": str(exc)}
         return {"ok": True, **result.model_dump()}
