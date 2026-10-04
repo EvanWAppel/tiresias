@@ -221,11 +221,12 @@ Phase-0 domain (restaurant marts), expand outward.
 - [x] Gold set 15 → 33 cases (26 answerable across every domain, 7 abstain incl.
       subtle OOD). 56 unit tests + 24 app tests green; ruff + ty clean.
 - [x] **Live eval 33/33 green** (Opus 4.8, 2026-10-03): every domain answered with the expected table cited; all 7 abstain cases (incl. forecast, home price, school scores, live traffic) correctly refused.
-- [x] Evan reviewed the column docs + confirmed the DECISIONS.md entry (2026-10-03).
+- [x] Evan confirmed the Phase 3 decisions (2026-10-03).
+- [ ] Evan: review the column docs against the data (blocks merging PR #29).
 - [x] Adversarial review (Opus correctness + Sonnet security):
       `reviews/2026-10-03-tiresias-all-domains.md`. Fixed C1–C15 and S1 (enforced query
       timeout); crime map sample excluded; gold 33 → 36. **Live eval 36/36.**
-- [?] S2 (map-only JSON columns) awaiting Evan's call (`BLOCKED.md`).
+- [x] S2: map-only JSON columns hidden from the agent and rejected by the guard, plus a 256 KB result cap (Evan chose option a).
 - [ ] Deploy to Railway (needs explicit approval; Railway key is the scoped one).
 
 ### P3.2 — Later in Phase 3
