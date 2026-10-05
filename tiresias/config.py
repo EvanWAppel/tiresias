@@ -12,11 +12,21 @@ Unknown keys are rejected rather than ignored: a typo in a security-relevant key
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Self
+from types import MappingProxyType
+from typing import Annotated, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveFloat,
+    PositiveInt,
+    field_validator,
+    model_validator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +49,13 @@ class TableScope(_Strict):
     excluded: frozenset[str] = frozenset()
     # Columns inside allowed tables that are hidden from the agent's catalog and
     # rejected by the SQL guard (e.g. large JSON shapes used only by map pages).
-    map_only_columns: dict[str, frozenset[str]] = {}
+    # Read-only after validation: it is shared by every component holding the config.
+    map_only_columns: Mapping[str, frozenset[str]] = Field(default_factory=dict)
+
+    @field_validator("map_only_columns", mode="after")
+    @classmethod
+    def _read_only(cls, value: Mapping[str, frozenset[str]]) -> Mapping[str, frozenset[str]]:
+        return MappingProxyType(dict(value))
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
@@ -72,22 +88,22 @@ class GoldPaths(_Strict):
 class Grounding(_Strict):
     # Below this top-1 dense cosine, retrieval hard-abstains before planning. It is
     # a lenient pre-filter; the planner is the authoritative abstain decider.
-    threshold: float = 0.56
+    threshold: Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)] = 0.56
     # Why this value: the measured score bands it was picked from.
     calibration: str = ""
 
 
 class Limits(_Strict):
     # Hard row cap injected into every executed query.
-    max_rows: int = 1000
+    max_rows: PositiveInt = 1000
     # Backstop on the serialized result size (bytes).
-    max_result_bytes: int = 256_000
+    max_result_bytes: PositiveInt = 256_000
     # Wall-clock cap (seconds) on executing a validated query.
-    statement_timeout_s: float = 15.0
+    statement_timeout_s: Annotated[PositiveFloat, Field(allow_inf_nan=False)] = 15.0
     # Abuse caps for a public chat front end.
-    max_question_chars: int = 500
-    max_per_session: int = 15
-    max_per_day: int = 200
+    max_question_chars: PositiveInt = 500
+    max_per_session: PositiveInt = 15
+    max_per_day: PositiveInt = 200
 
 
 class Chat(_Strict):
@@ -119,6 +135,7 @@ class TiresiasConfig(_Strict):
     def _resolve_paths(self) -> Self:
         # Frozen model: resolve relative paths once, at construction.
         def resolve(path: Path) -> Path:
+            path = path.expanduser()
             return path if path.is_absolute() else self.root / path
 
         for name in ("warehouse", "dbt_target", "metrics"):
@@ -150,8 +167,13 @@ class TiresiasConfig(_Strict):
         return self.metrics
 
     def with_limits(self, **overrides: float) -> TiresiasConfig:
-        """A copy with some limits replaced (e.g. a tighter timeout in a test)."""
-        return self.model_copy(update={"limits": self.limits.model_copy(update=overrides)})
+        """A copy with some limits replaced (e.g. a tighter timeout in a test).
+
+        The new limits are validated like the YAML: an unknown or out-of-range cap
+        raises rather than silently leaving the old value in place.
+        """
+        limits = Limits.model_validate({**self.limits.model_dump(), **overrides})
+        return self.model_copy(update={"limits": limits})
 
 
 def load_config(path: Path) -> TiresiasConfig:

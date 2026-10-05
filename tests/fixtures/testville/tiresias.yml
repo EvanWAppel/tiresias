@@ -22,6 +22,7 @@ tables:
     - mart_qa_audit
   map_only_columns:
     mart_park_areas: [geometry_json]
+    mart_events: [path_json]
 
 examples:
   - question: Which restaurants fail health inspections most often?

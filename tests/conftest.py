@@ -60,7 +60,10 @@ select
 from range(1, 31) t(i);
 
 create table mart_events as
-select i::integer as event_id, 'kind ' || (i % 9) as event_kind
+select
+    i::integer as event_id,
+    'kind ' || (i % 9) as event_kind,
+    '[[0,0],[1,1]]' as path_json
 from range(1, 3001) t(i);
 
 create table mart_qa_audit as
@@ -96,6 +99,7 @@ COLUMN_DOCS: dict[str, str] = {
     "geometry_json": "GeoJSON boundary for the map page.",
     "event_id": "Event id.",
     "event_kind": "Kind of event.",
+    "path_json": "GeoJSON line for the map page.",
     "audit_id": "Audit row id.",
     "status": "Audit status.",
 }

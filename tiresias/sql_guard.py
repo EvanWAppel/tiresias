@@ -19,6 +19,7 @@ somehow slipped the guard would still be refused by DuckDB.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 
 import duckdb
 import sqlglot
@@ -70,12 +71,12 @@ def _effective_limit(tree: exp.Expression, max_rows: int) -> int:
     return min(requested, max_rows)
 
 
-def _map_only_names(map_only: dict[str, frozenset[str]], referenced: set[str]) -> frozenset[str]:
+def _map_only_names(map_only: Mapping[str, frozenset[str]], referenced: set[str]) -> frozenset[str]:
     return frozenset().union(*(map_only.get(t, frozenset()) for t in referenced))
 
 
 def _reject_map_only_references(
-    tree: exp.Expression, referenced: set[str], map_only: dict[str, frozenset[str]]
+    tree: exp.Expression, referenced: set[str], map_only: Mapping[str, frozenset[str]]
 ) -> None:
     """Reject direct references to map-only columns, and whole-row references.
 
@@ -108,7 +109,7 @@ def _reject_map_only_references(
 
 
 def _reject_map_only_output(
-    described: list[tuple], referenced: set[str], map_only: dict[str, frozenset[str]]
+    described: list[tuple], referenced: set[str], map_only: Mapping[str, frozenset[str]]
 ) -> None:
     """Reject if the planned output exposes a map-only column (by name or nested)."""
     blocked = {b.lower() for b in _map_only_names(map_only, referenced)}

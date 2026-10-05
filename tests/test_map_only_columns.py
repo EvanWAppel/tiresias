@@ -31,6 +31,10 @@ def test_catalog_hides_map_only_columns(config: TiresiasConfig, catalog: Catalog
         "select p from mart_park_areas p",
         "select to_json(p) as j from mart_park_areas p",
         "select mart_park_areas from mart_park_areas",
+        # A second map-only table, alone and joined to the first.
+        "select path_json from mart_events",
+        "select p.acres, e.path_json from mart_park_areas p join mart_events e on true",
+        "select e from mart_events e",
     ],
 )
 def test_guard_rejects_map_only_columns(config: TiresiasConfig, sql: str) -> None:
@@ -44,6 +48,8 @@ def test_guard_rejects_map_only_columns(config: TiresiasConfig, sql: str) -> Non
         "select * from mart_park_areas",
         "select p.* from mart_park_areas p",
         "select columns('.*json') from mart_park_areas",
+        "select * from mart_events",
+        "select p.park_name, e.* from mart_park_areas p join mart_events e on true",
     ],
 )
 def test_guard_rejects_star_expansion_of_map_only_columns(config: TiresiasConfig, sql: str) -> None:
