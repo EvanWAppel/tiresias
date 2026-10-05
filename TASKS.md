@@ -15,30 +15,53 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       Elvis's untracked planning brief is not carried over; this repo's
       `PRD.md` is engineering-only.
 - [x] Scanned every historical blob for secrets/private strings before publishing.
-- [ ] Create public `EvanWAppel/tiresias`; push; apply standard branch protection.
+- [x] Created public `EvanWAppel/tiresias`; pushed `main`; standard branch protection
+      applied (2026-10-04).
 
-### E1 — Config-driven engine
-- [ ] `tiresias.yml` schema (Pydantic): city, blurb, paths, tables, map-only
-      columns, examples, metrics path, gold paths, threshold, limits.
-- [ ] Remove Elvis specifics from `tiresias/` (allowlist, prompts, exemplars,
-      abstain message); a test fails on any city string in the package.
+### E1 — Config-driven engine (branch `e1-config-engine`, with E2)
+- [x] `tiresias.yml` schema (Pydantic, `tiresias/config.py`): city, blurb, paths
+      (relative to the YAML), table scope + map-only columns, examples, planner
+      notes, metrics path, gold paths, threshold + calibration notes, limits, chat
+      copy. Unknown keys rejected; allowed/excluded overlap rejected.
+- [x] Removed Elvis specifics from `tiresias/`: allowlist, exemplars, threshold,
+      prompts (`tiresias/prompts.py`), abstain message, MCP instructions. Every
+      module takes the config explicitly; no defaults point at a city.
+      `tests/test_no_city_specifics.py` fails on any city/agency name or `mart_`.
+- [x] Elvis's former constants, metrics and gold sets moved to `examples/elvis/`
+      (reference config, seed for E4); validated locally against Elvis's real dbt
+      artifacts (29/29 tables, every example grounds).
 
 ### E2 — Hermetic tests + CI
-- [ ] Synthetic fixture warehouse + minimal dbt artifacts in `conftest.py`.
-- [ ] Port the guard / timeout / map-only / retrieval / agent / MCP tests to it.
-- [ ] CI: ruff, ty, pytest (no network, no key).
+- [x] Synthetic "Testville" city (`tests/fixtures/testville` + `conftest.py`
+      builds its DuckDB warehouse and dbt artifacts in a temp dir).
+- [x] Ported guard / timeout / map-only / catalog / metrics / retrieval / agent /
+      MCP tests: **115 passed** (incl. slow fastembed), ruff + ty clean.
+- [x] CI (`.github/workflows/ci.yml`): ruff, ruff format, ty, pytest (no network,
+      no key). prek hooks run the same.
+- [ ] First green CI run on the PR.
 
-### E3 — Packaging, CLI, Streamlit extra
-- [ ] `pyproject.toml` (Python 3.12), `tiresias[streamlit]` extra.
-- [ ] CLI: `tiresias mcp`, `tiresias eval`, `tiresias calibrate`.
-- [ ] `render_chat(config)` with the abuse guards; README; tag `v0.1.0`.
+### E3 — Packaging, CLI, Streamlit extra (branch `e3-packaging`)
+- [x] `pyproject.toml` (Python 3.12, uv_build flat layout), `tiresias[streamlit]`
+      extra, `tiresias` console script; wheel holds only the engine.
+- [x] CLI (`tiresias/cli.py`): `check` (config vs dbt artifacts: missing tables,
+      wrong schema, bad map-only columns, example grounds, metric refs,
+      undocumented columns), `calibrate`, `eval` (retrieval recall@k, then the live
+      gold set; exits 2 without a key instead of skipping), `mcp` (stdio).
+      Engine harness in `tiresias/evals.py` restores the two E1 removals.
+- [x] `render_chat(config)` (`tiresias/chat.py`) with the abuse guards; caps from
+      `limits:` with `TIRESIAS_MAX_*` env overrides (same names Elvis uses).
+      Stale `views/tiresias.py` removed. README.
+- [x] Smoke on Elvis's real artifacts: `check` clean; `calibrate` lowest
+      answerable 0.623 vs threshold 0.56 (matches the recorded calibration).
+- [ ] License (Evan's call), then tag `v0.1.0` after PRs #1 and #2 merge.
 
 ### E4 — Elvis adopts v0.1.0
 - [ ] Elvis: delete `tiresias/`, add `tiresias.yml` + examples/metrics/gold;
       pin `v0.1.0`; live eval 36/36; deploy.
 
 ### E5 — Sibling cities
-- [ ] robbins (decide: replace or sit alongside `nl_sql.py`).
+- [ ] robbins: Tiresias **replaces** `nl_sql.py` / `sql_safety.py` / `semantic.py`
+      (Evan, 2026-10-04); old modules deleted once robbins' gold set passes.
 - [ ] gregan (column docs first).
 - [ ] groening (column docs first).
 

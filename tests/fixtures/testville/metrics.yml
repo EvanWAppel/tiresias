@@ -1,0 +1,16 @@
+version: 1
+metrics:
+  - name: inspection_failure_rate
+    label: Restaurant inspection failure rate
+    grain: one restaurant (permit_number)
+    description: Share of a restaurant's inspections that failed, as a percentage.
+    unit: percent
+    source_table: mart_inspections
+    source_column: failure_rate_pct
+    expression: round(failed_inspections / nullif(total_inspections, 0) * 100, 1)
+    numerator: failed_inspections
+    denominator: total_inspections
+    references:
+      - mart_inspections.failure_rate_pct
+      - mart_inspections.failed_inspections
+      - mart_inspections.total_inspections

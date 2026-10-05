@@ -1,0 +1,14 @@
+version: 1
+cases:
+  - id: count_restaurants
+    question: How many restaurants are there?
+    expect: answer
+    must_reference: [mart_inspections]
+  - id: worst_failure_rate
+    question: Which restaurant has the highest failure rate?
+    expect: answer
+    must_reference: [mart_inspections]
+    sql_must_contain: [failure_rate_pct]
+  - id: off_topic
+    question: What will the stock market do tomorrow?
+    expect: abstain

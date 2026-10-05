@@ -5,7 +5,7 @@ column and model *descriptions* come from ``target/manifest.json`` (the dbt docs
 The catalog is bounded to the table allowlist so retrieval, the MCP
 resource, and the SQL guard all share one honest picture of what exists.
 
-Regenerate the artifacts with ``uv run dbt docs generate --profiles-dir .`` if the
+Regenerate the artifacts with ``dbt docs generate`` (in the city repo) if the
 warehouse schema changes.
 """
 
@@ -16,7 +16,7 @@ import logging
 
 from pydantic import BaseModel
 
-from tiresias.config import DEFAULT_SETTINGS, MAP_ONLY_COLUMNS, TiresiasSettings
+from tiresias.config import TiresiasConfig
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class Column(BaseModel):
 
 
 class Table(BaseModel):
-    """One mart: its schema-qualified identity, columns, and dbt description."""
+    """One table: its schema-qualified identity, columns, and dbt description."""
 
     model_config = {"frozen": True}
 
@@ -69,39 +69,37 @@ class Catalog(BaseModel):
         for table in self.tables:
             if table.name == name:
                 return table
-        raise KeyError(
-            f"Table {name!r} not in catalog; known tables: {list(self.table_names)}"
-        )
+        raise KeyError(f"Table {name!r} not in catalog; known tables: {list(self.table_names)}")
 
     @property
     def table_names(self) -> tuple[str, ...]:
         return tuple(table.name for table in self.tables)
 
 
-def load_catalog(settings: TiresiasSettings = DEFAULT_SETTINGS) -> Catalog:
+def load_catalog(config: TiresiasConfig) -> Catalog:
     """Build the bounded catalog from the dbt artifacts.
 
-    Only tables in ``settings.allowed_tables`` are included, minus their map-only
-    columns (``MAP_ONLY_COLUMNS``). Raises if the artifacts
+    Only the config's allowed tables are included, minus their map-only
+    columns. Raises if the artifacts
     are missing (a clear instruction to run ``dbt docs generate``) or yield no
     allowed tables (a scope/config mismatch worth failing loudly on).
     """
-    for path in (settings.catalog_path, settings.manifest_path):
+    for path in (config.catalog_path, config.manifest_path):
         if not path.exists():
             raise FileNotFoundError(
-                f"dbt artifact not found at {path}. "
-                "Run `uv run dbt docs generate --profiles-dir .` first."
+                f"dbt artifact not found at {path}. Run `dbt docs generate` in the city repo first."
             )
 
-    catalog_json = json.loads(settings.catalog_path.read_text())
-    manifest_json = json.loads(settings.manifest_path.read_text())
+    catalog_json = json.loads(config.catalog_path.read_text())
+    manifest_json = json.loads(config.manifest_path.read_text())
     manifest_nodes = manifest_json.get("nodes", {})
 
+    map_only = config.tables.map_only_columns
     tables: list[Table] = []
     for unique_id, node in catalog_json.get("nodes", {}).items():
         meta = node["metadata"]
         name = meta["name"]
-        if name not in settings.allowed_tables:
+        if name not in config.tables.allowed:
             continue
 
         doc_columns = manifest_nodes.get(unique_id, {}).get("columns", {})
@@ -109,12 +107,11 @@ def load_catalog(settings: TiresiasSettings = DEFAULT_SETTINGS) -> Catalog:
             Column(
                 name=col["name"],
                 type=col["type"],
-                description=(doc_columns.get(col["name"], {}) or {}).get("description")
-                or "",
+                description=(doc_columns.get(col["name"], {}) or {}).get("description") or "",
             )
             for col in sorted(node["columns"].values(), key=lambda c: c["index"])
-            # Map-only geometry is not part of the agent's world (see config).
-            if col["name"] not in MAP_ONLY_COLUMNS.get(name, frozenset())
+            # Map-only columns are not part of the agent's world (see config).
+            if col["name"] not in map_only.get(name, frozenset())
         )
         tables.append(
             Table(
@@ -128,8 +125,8 @@ def load_catalog(settings: TiresiasSettings = DEFAULT_SETTINGS) -> Catalog:
 
     if not tables:
         raise ValueError(
-            f"No allowed tables found in {settings.catalog_path}; "
-            f"allowlist={sorted(settings.allowed_tables)}. "
+            f"No allowed tables found in {config.catalog_path}; "
+            f"allowlist={sorted(config.tables.allowed)}. "
             "Check the allowlist or regenerate the catalog."
         )
 

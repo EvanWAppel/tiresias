@@ -13,8 +13,6 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
-from tiresias.config import METRICS_PATH
-
 logger = logging.getLogger(__name__)
 
 
@@ -51,22 +49,22 @@ class MetricRegistry(BaseModel):
         for metric in self.metrics:
             if metric.name == name:
                 return metric
-        raise KeyError(
-            f"No governed metric named {name!r}; known metrics: {list(self.names)}"
-        )
+        raise KeyError(f"No governed metric named {name!r}; known metrics: {list(self.names)}")
 
     @property
     def names(self) -> tuple[str, ...]:
         return tuple(metric.name for metric in self.metrics)
 
 
-def load_registry(path: Path = METRICS_PATH) -> MetricRegistry:
+def load_registry(path: Path) -> MetricRegistry:
     """Parse and validate the metric registry YAML."""
     logger.debug("Loading metric registry from %s", path)
+    if not path.exists():
+        raise FileNotFoundError(f"Metric registry not found at {path}")
     data = yaml.safe_load(path.read_text())
     return MetricRegistry.model_validate(data)
 
 
-def get_metric(name: str, path: Path = METRICS_PATH) -> Metric:
+def get_metric(name: str, path: Path) -> Metric:
     """Convenience: load the registry and return one metric by name."""
     return load_registry(path).get(name)

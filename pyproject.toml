@@ -1,0 +1,58 @@
+[project]
+name = "tiresias"
+version = "0.1.0"
+description = "Grounded text-to-SQL agent for dbt + DuckDB warehouses: cites its SQL, abstains when it can't ground an answer."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "anthropic>=0.122.0",
+    "duckdb>=1.5.5",
+    "fastembed>=0.8.0",
+    "langgraph>=1.2.11",
+    "mcp>=2.0.0",
+    "numpy>=2.5",
+    "onnxruntime<1.24",
+    "pandas>=3.0.5",
+    "pydantic>=2.13.4",
+    "pyyaml>=6.0.3",
+    "rank-bm25>=0.2.2",
+    "sqlglot>=30.15.0",
+]
+
+[project.optional-dependencies]
+streamlit = [
+    "streamlit>=1.61.1",
+]
+
+[project.scripts]
+tiresias = "tiresias.cli:run"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Flat layout: the package lives at ./tiresias, not ./src/tiresias.
+module-root = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "slow: exercises a real model/network path (deselect with -m 'not slow')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.2",
+    "ty>=0.0.72",
+]

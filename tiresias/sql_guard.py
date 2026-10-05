@@ -19,13 +19,14 @@ somehow slipped the guard would still be refused by DuckDB.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 
 import duckdb
 import sqlglot
 from pydantic import BaseModel
 from sqlglot import exp
 
-from tiresias.config import DEFAULT_SETTINGS, MAP_ONLY_COLUMNS, TiresiasSettings
+from tiresias.config import TiresiasConfig
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,6 @@ _FORBIDDEN_NODES: tuple[type[exp.Expression], ...] = (
     exp.Command,  # SET, CALL, VACUUM, and other bare commands
     exp.Copy,
 )
-
-_ALLOWED_ROOTS: tuple[type[exp.Expression], ...] = (exp.Select, exp.Union, exp.Subquery)
 
 
 class SqlGuardError(ValueError):
@@ -72,25 +71,27 @@ def _effective_limit(tree: exp.Expression, max_rows: int) -> int:
     return min(requested, max_rows)
 
 
-def _map_only_names(referenced: set[str]) -> frozenset[str]:
-    return frozenset().union(*(MAP_ONLY_COLUMNS.get(t, frozenset()) for t in referenced))
+def _map_only_names(map_only: Mapping[str, frozenset[str]], referenced: set[str]) -> frozenset[str]:
+    return frozenset().union(*(map_only.get(t, frozenset()) for t in referenced))
 
 
-def _reject_map_only_references(tree: exp.Expression, referenced: set[str]) -> None:
+def _reject_map_only_references(
+    tree: exp.Expression, referenced: set[str], map_only: Mapping[str, frozenset[str]]
+) -> None:
     """Reject direct references to map-only columns, and whole-row references.
 
     DuckDB lets a bare table name or alias stand for the entire row as a STRUCT
-    (``select t from mart_tract_metrics t``), which would smuggle the geometry
+    (``select t from some_table t``), which would smuggle the geometry
     out, so a column reference that names a map-only table or its alias is
     rejected too.
     """
-    blocked = _map_only_names(referenced)
+    blocked = _map_only_names(map_only, referenced)
     if not blocked:
         return
     row_names = {
         name.lower()
         for table in tree.find_all(exp.Table)
-        if table.name in MAP_ONLY_COLUMNS
+        if table.name in map_only
         for name in (table.name, table.alias)
         if name
     }
@@ -107,9 +108,11 @@ def _reject_map_only_references(tree: exp.Expression, referenced: set[str]) -> N
             )
 
 
-def _reject_map_only_output(described: list[tuple], referenced: set[str]) -> None:
+def _reject_map_only_output(
+    described: list[tuple], referenced: set[str], map_only: Mapping[str, frozenset[str]]
+) -> None:
     """Reject if the planned output exposes a map-only column (by name or nested)."""
-    blocked = {b.lower() for b in _map_only_names(referenced)}
+    blocked = {b.lower() for b in _map_only_names(map_only, referenced)}
     for row in described:
         column_name, column_type = str(row[0]).lower(), str(row[1]).lower()
         if any(b in column_name or b in column_type for b in blocked):
@@ -121,7 +124,7 @@ def _reject_map_only_output(described: list[tuple], referenced: set[str]) -> Non
 
 def guard_sql(
     sql: str,
-    settings: TiresiasSettings = DEFAULT_SETTINGS,
+    config: TiresiasConfig,
     connection: duckdb.DuckDBPyConnection | None = None,
 ) -> SafeSql:
     """Validate and harden ``sql``; raise ``SqlGuardError`` on any violation.
@@ -141,10 +144,9 @@ def guard_sql(
         raise SqlGuardError("only a single statement is allowed")
 
     tree = statements[0]
-    if not isinstance(tree, _ALLOWED_ROOTS):
-        raise SqlGuardError(
-            f"only SELECT queries are allowed, got {type(tree).__name__}"
-        )
+    # Spelled inline (not a tuple constant) so the type checker narrows `tree`.
+    if not isinstance(tree, (exp.Select, exp.Union, exp.Subquery)):
+        raise SqlGuardError(f"only SELECT queries are allowed, got {type(tree).__name__}")
     for node in tree.walk():
         if isinstance(node, _FORBIDDEN_NODES):
             raise SqlGuardError(f"forbidden statement type: {type(node).__name__}")
@@ -158,21 +160,21 @@ def guard_sql(
         if name in cte_names:
             continue
         schema = table.db  # schema qualifier, "" if unqualified
-        if name not in settings.allowed_tables:
+        if name not in config.tables.allowed:
             raise SqlGuardError(
-                f"table {name!r} is not in the allowlist "
-                f"{sorted(settings.allowed_tables)}"
+                f"table {name!r} is not in the allowlist {sorted(config.tables.allowed)}"
             )
-        if schema and schema not in settings.allowed_schemas:
+        if schema and schema not in config.tables.schemas:
             raise SqlGuardError(f"schema {schema!r} is not allowed")
         referenced.add(name)
 
     if not referenced:
         raise SqlGuardError("query references no allowed table")
 
-    _reject_map_only_references(tree, referenced)
+    map_only = config.tables.map_only_columns
+    _reject_map_only_references(tree, referenced, map_only)
 
-    row_cap = _effective_limit(tree, settings.max_rows)
+    row_cap = _effective_limit(tree, config.limits.max_rows)
     guarded = tree.limit(row_cap)
     final_sql = guarded.sql(dialect="duckdb")
 
@@ -184,7 +186,7 @@ def guard_sql(
             described = connection.cursor().execute(f"DESCRIBE {final_sql}").fetchall()
         except duckdb.Error as exc:
             raise SqlGuardError(f"query failed catalog validation: {exc}") from exc
-        _reject_map_only_output(described, referenced)
+        _reject_map_only_output(described, referenced, map_only)
 
     logger.debug("Guarded SQL (cap=%d, tables=%s): %s", row_cap, sorted(referenced), final_sql)
     return SafeSql(sql=final_sql, tables=tuple(sorted(referenced)), row_cap=row_cap)

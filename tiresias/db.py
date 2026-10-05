@@ -1,9 +1,8 @@
 """Read-only DuckDB access for Tiresias.
 
-Mirrors ``app_db.py``'s core discipline — the connection is opened
-``read_only=True`` so even a bug in the SQL guard physically cannot mutate the
-warehouse — but drops the Streamlit caching so the MCP server and eval harness can
-use it headless. Errors are never swallowed; a failing query raises for the caller.
+The connection is opened ``read_only=True`` so even a bug in the SQL guard
+physically cannot mutate the warehouse. No Streamlit caching, so the MCP server and
+eval harness can use it headless. Errors are never swallowed; a failing query raises for the caller.
 """
 
 from __future__ import annotations
@@ -14,8 +13,6 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
-
-from tiresias.config import DB_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -31,18 +28,18 @@ def _connection(db_path_str: str) -> duckdb.DuckDBPyConnection:
     if not db_path.exists():
         raise FileNotFoundError(
             f"Warehouse not found at {db_path}. "
-            "Run `uv run python build_warehouse.py` then `uv run dbt build` first."
+            "Build the city's warehouse (and run `dbt build`) first."
         )
     logger.debug("Opening read-only DuckDB connection at %s", db_path)
     return duckdb.connect(str(db_path), read_only=True)
 
 
-def get_connection(db_path: Path = DB_PATH) -> duckdb.DuckDBPyConnection:
+def get_connection(db_path: Path) -> duckdb.DuckDBPyConnection:
     """Return the shared read-only connection for ``db_path``."""
     return _connection(str(db_path))
 
 
-def query(sql: str, db_path: Path = DB_PATH) -> pd.DataFrame:
+def query(sql: str, db_path: Path) -> pd.DataFrame:
     """Run ``sql`` on a fresh cursor and return a DataFrame.
 
     This is the raw reader used by the catalog/profiling helpers. Untrusted,

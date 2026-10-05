@@ -1,11 +1,11 @@
-"""Tiresias — a grounded civic-intelligence agent over the Elvis warehouse.
+"""Tiresias — a grounded text-to-SQL agent for dbt + DuckDB warehouses.
 
-Tiresias reads the same ``vegas.duckdb`` and dbt artifacts that Elvis builds, but
-never mutates them. It answers natural-language questions about Las Vegas open data
-with citations and the SQL shown — or abstains when it cannot ground the answer in
-a real row. See ``PRD.md`` for the product decisions and phase plan.
+Tiresias reads a city's DuckDB warehouse and dbt artifacts read-only. It answers
+natural-language questions with the SQL and citations shown, or abstains when it
+cannot ground the answer in a real row. Each city describes its warehouse in a
+``tiresias.yml`` (see ``tiresias.config``); the engine holds no city specifics.
 """
 
 __all__ = ["__version__"]
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
