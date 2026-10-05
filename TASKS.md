@@ -38,7 +38,7 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       MCP tests: **115 passed** (incl. slow fastembed), ruff + ty clean.
 - [x] CI (`.github/workflows/ci.yml`): ruff, ruff format, ty, pytest (no network,
       no key). prek hooks run the same.
-- [ ] First green CI run on the PR.
+- [x] CI green on PRs #1 and #2.
 
 ### E3 — Packaging, CLI, Streamlit extra (branch `e3-packaging`)
 - [x] `pyproject.toml` (Python 3.12, uv_build flat layout), `tiresias[streamlit]`
@@ -53,7 +53,8 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       Stale `views/tiresias.py` removed. README.
 - [x] Smoke on Elvis's real artifacts: `check` clean; `calibrate` lowest
       answerable 0.623 vs threshold 0.56 (matches the recorded calibration).
-- [ ] License (Evan's call), then tag `v0.1.0` after PRs #1 and #2 merge.
+- [x] PRs #1 and #2 merged (2026-10-05); MIT license (Evan's choice).
+- [ ] Tag `v0.1.0`.
 
 ### E4 — Elvis adopts v0.1.0
 - [ ] Elvis: delete `tiresias/`, add `tiresias.yml` + examples/metrics/gold;

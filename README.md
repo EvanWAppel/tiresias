@@ -88,3 +88,7 @@ uv run ruff check tiresias tests && uv run ty check tiresias tests
 The suite needs no warehouse, network, or API key. `-m slow` adds the real
 fastembed model. Planning docs: [`PRD.md`](PRD.md), [`TASKS.md`](TASKS.md),
 [`DECISIONS.md`](DECISIONS.md).
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

@@ -3,6 +3,8 @@ name = "tiresias"
 version = "0.1.0"
 description = "Grounded text-to-SQL agent for dbt + DuckDB warehouses: cites its SQL, abstains when it can't ground an answer."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "anthropic>=0.122.0",
