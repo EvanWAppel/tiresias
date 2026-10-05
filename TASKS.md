@@ -40,13 +40,20 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       no key). prek hooks run the same.
 - [ ] First green CI run on the PR.
 
-### E3 — Packaging, CLI, Streamlit extra
-- [ ] `pyproject.toml` (Python 3.12), `tiresias[streamlit]` extra.
-- [ ] CLI: `tiresias mcp`, `tiresias eval`, `tiresias calibrate`. Re-adds, as
-      engine code + hermetic tests, the two harnesses removed in E1: the live gold
-      eval runner and the retrieval recall@k mini-eval.
-- [ ] `render_chat(config)` with the abuse guards (replaces the stale Elvis page
-      `views/tiresias.py`); README; license (Evan's call); tag `v0.1.0`.
+### E3 — Packaging, CLI, Streamlit extra (branch `e3-packaging`)
+- [x] `pyproject.toml` (Python 3.12, uv_build flat layout), `tiresias[streamlit]`
+      extra, `tiresias` console script; wheel holds only the engine.
+- [x] CLI (`tiresias/cli.py`): `check` (config vs dbt artifacts: missing tables,
+      wrong schema, bad map-only columns, example grounds, metric refs,
+      undocumented columns), `calibrate`, `eval` (retrieval recall@k, then the live
+      gold set; exits 2 without a key instead of skipping), `mcp` (stdio).
+      Engine harness in `tiresias/evals.py` restores the two E1 removals.
+- [x] `render_chat(config)` (`tiresias/chat.py`) with the abuse guards; caps from
+      `limits:` with `TIRESIAS_MAX_*` env overrides (same names Elvis uses).
+      Stale `views/tiresias.py` removed. README.
+- [x] Smoke on Elvis's real artifacts: `check` clean; `calibrate` lowest
+      answerable 0.623 vs threshold 0.56 (matches the recorded calibration).
+- [ ] License (Evan's call), then tag `v0.1.0` after PRs #1 and #2 merge.
 
 ### E4 — Elvis adopts v0.1.0
 - [ ] Elvis: delete `tiresias/`, add `tiresias.yml` + examples/metrics/gold;

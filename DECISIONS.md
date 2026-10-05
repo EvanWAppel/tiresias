@@ -43,3 +43,18 @@ the old modules go once robbins' gold set passes.
   and rebuilding it in Elvis later from git history).
 - The prompt wording changed slightly where it named Elvis tables; E4's live
   36/36 run is the check that behavior held.
+
+## 2026-10-04 — E3 CLI and chat shape (drafted by Claude, awaiting Evan's confirmation)
+
+- **Added `tiresias check`** beyond the PRD's three commands: a static check of
+  `tiresias.yml` against the city's dbt artifacts, including undocumented
+  columns. It is the "column docs first" gate for gregan and groening (rejected:
+  each city writing its own artifact tests, as Elvis did).
+- **`tiresias eval` without a key exits 2** rather than skipping (rejected: the old
+  pytest skip, which made a missing key look like a pass). `--retrieval-only`
+  runs the keyless half.
+- **The live gold eval is a CLI, not a pytest module**, so cities run it without
+  vendoring tests (rejected: shipping a pytest plugin).
+- **Chat caps:** `limits:` in the YAML, overridable by the same `TIRESIAS_MAX_*`
+  env vars Elvis already uses on Railway (rejected: env-only, which hides each
+  city's defaults from review).
