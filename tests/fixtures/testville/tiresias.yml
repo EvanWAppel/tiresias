@@ -1,0 +1,59 @@
+# Synthetic city used by the hermetic test suite. Every name here is invented;
+# conftest.py builds the matching warehouse and dbt artifacts in a temp dir.
+city: Testville
+blurb: >-
+  restaurant inspections, health-code violations, monthly service calls, and parks
+warehouse: testville.duckdb
+dbt_target: target
+metrics: metrics.yml
+gold:
+  answers: evals/gold.yaml
+  retrieval: evals/retrieval_gold.yaml
+
+tables:
+  schemas: [main]
+  allowed:
+    - mart_inspections
+    - mart_top_violations
+    - mart_service_calls_monthly
+    - mart_park_areas
+    - mart_events
+  excluded:
+    - mart_qa_audit
+  map_only_columns:
+    mart_park_areas: [geometry_json]
+
+examples:
+  - question: Which restaurants fail health inspections most often?
+    guidance: Use mart_inspections with the inspection_failure_rate metric (failure_rate_pct).
+    grounds: [mart_inspections, inspection_failure_rate]
+  - question: What are the most common health code violations?
+    guidance: Use mart_top_violations, ranked by occurrence_count.
+    grounds: [mart_top_violations]
+  - question: How many service calls were there per month?
+    guidance: Use mart_service_calls_monthly (call_month, call_count).
+    grounds: [mart_service_calls_monthly]
+  - question: Which parks are the largest?
+    guidance: Use mart_park_areas ordered by acres.
+    grounds: [mart_park_areas]
+
+planner_notes:
+  - Service calls are requests for service, not confirmed incidents.
+
+grounding:
+  threshold: 0.30
+  calibration: >-
+    Synthetic fixture value; real cities calibrate with `tiresias calibrate`.
+
+limits:
+  max_rows: 1000
+  max_result_bytes: 256000
+  statement_timeout_s: 15
+  max_question_chars: 500
+  max_per_session: 15
+  max_per_day: 200
+
+chat:
+  example_questions:
+    - Which restaurants have the highest failure rate?
+    - How many service calls were there each month?

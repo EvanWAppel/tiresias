@@ -1,116 +1,165 @@
-"""Tiresias configuration — paths, read-only query caps, and the queryable table scope.
+"""Per-city configuration, loaded from a ``tiresias.yml`` in the city's repo.
 
-These are read-only defaults; construct ``TiresiasSettings(...)`` to override in
-tests (e.g. point ``db_path`` at a fixture warehouse). Nothing here talks to an
-LLM — the model id and provider settings live in ``tiresias/provider.py``.
+The engine holds no city specifics: the warehouse, the queryable tables, the
+retrieval examples, prompt notes, the grounding threshold, and every limit come
+from this file. Relative paths resolve against the YAML file's own directory, so a
+city's config works the same from any working directory.
+
+Unknown keys are rejected rather than ignored: a typo in a security-relevant key
+(the table allowlist, a limit) must fail loudly, not silently fall back.
 """
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Self
 
-from pydantic import BaseModel
+import yaml
+from pydantic import BaseModel, ConfigDict, model_validator
 
 logger = logging.getLogger(__name__)
 
-# Repo root = parent of the tiresias/ package. The warehouse and dbt artifacts are
-# written here by build_warehouse.py + dbt build (both gitignored, rebuilt on deploy).
-REPO_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = REPO_ROOT / "vegas.duckdb"
-MANIFEST_PATH = REPO_ROOT / "target" / "manifest.json"
-CATALOG_PATH = REPO_ROOT / "target" / "catalog.json"
-METRICS_PATH = Path(__file__).resolve().parent / "metrics.yml"
 
-# Query scope: every user-facing Elvis mart across all civic domains. Kept as an
-# explicit list (not "every mart_*") because it is a security boundary — a new
-# mart must be deliberately opted in. The catalog, retrieval corpus, and the SQL
-# allowlist are all bounded to these.
-ALLOWED_TABLES: tuple[str, ...] = (
-    # Restaurant inspections (SNHD)
-    "mart_restaurants",
-    "mart_inspection_history",
-    "mart_inspection_violations",
-    "mart_top_violations",
-    "mart_inspections_over_time",
-    # Crime (LVMPD calls for service)
-    "mart_crime_by_type",
-    "mart_crime_by_hour_weekday",
-    "mart_crime_monthly",
-    # Building permits + business licenses
-    "mart_permits_monthly",
-    "mart_permits_by_type",
-    "mart_henderson_permits",
-    "mart_henderson_licenses_by_type",
-    # Tourism, environment, civic life
-    "mart_lvcva_indicators",
-    "mart_weather_monthly",
-    "mart_weather_extreme_days",
-    "mart_air_quality_daily",
-    "mart_air_quality_monthly",
-    "mart_lake_mead_monthly",
-    "mart_marriage_monthly",
-    "mart_marriage_daily",
-    "mart_marriage_by_origin",
-    "mart_marriage_by_gender_year",
-    # Places and inventories
-    "mart_short_term_rentals",
-    "mart_road_construction",
-    "mart_parks",
-    "mart_art_work_points",
-    "mart_public_art_metro",
-    "mart_fire_prevention_inspections",
-    "mart_tract_metrics",
-)
-
-# Built marts deliberately kept out of scope (a test requires every built mart_*
-# to be in exactly one of ALLOWED_TABLES / EXCLUDED_TABLES):
-#   - mart_tract_assignment_audit: internal QA bookkeeping, not a civic dataset.
-#   - mart_crime_map_sample: a random ~12k-row sample (~1% of calls) for the map;
-#     any count or total from it would be a silent undercount.
-EXCLUDED_TABLES: frozenset[str] = frozenset(
-    {"mart_tract_assignment_audit", "mart_crime_map_sample"}
-)
-
-# Map-only geometry columns inside allowed tables: hidden from the agent's catalog
-# and rejected by the SQL guard. They hold JSON shapes for the map pages (tract
-# boundaries up to ~320 KB per row), carry no analytic meaning, and would bloat
-# results and prompts. The Streamlit map pages read the warehouse directly and are
-# unaffected.
-MAP_ONLY_COLUMNS: dict[str, frozenset[str]] = {
-    "mart_tract_metrics": frozenset({"geometry_json"}),
-    "mart_road_construction": frozenset({"path_json"}),
-}
+class _Strict(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
 
-class TiresiasSettings(BaseModel):
-    """Read-only execution guardrails for the validated SQL tool.
+class TableScope(_Strict):
+    """The security boundary: which tables and columns the agent may see and query.
 
-    Frozen so a set of settings can be shared across the MCP server, agent, and
-    eval harness without any component mutating another's caps mid-run.
+    Kept as explicit lists (not "every mart") so a new table must be deliberately
+    opted in. ``excluded`` records tables deliberately kept out, so a city can test
+    that every built model is classified one way or the other.
     """
 
-    model_config = {"frozen": True}
+    # dbt materializes marts into these schemas; any other qualifier is rejected.
+    schemas: frozenset[str] = frozenset({"main"})
+    allowed: frozenset[str]
+    excluded: frozenset[str] = frozenset()
+    # Columns inside allowed tables that are hidden from the agent's catalog and
+    # rejected by the SQL guard (e.g. large JSON shapes used only by map pages).
+    map_only_columns: dict[str, frozenset[str]] = {}
 
-    db_path: Path = DB_PATH
-    manifest_path: Path = MANIFEST_PATH
-    catalog_path: Path = CATALOG_PATH
-    metrics_path: Path = METRICS_PATH
+    @model_validator(mode="after")
+    def _consistent(self) -> Self:
+        overlap = self.allowed & self.excluded
+        if overlap:
+            raise ValueError(f"tables both allowed and excluded: {sorted(overlap)}")
+        stray = set(self.map_only_columns) - self.allowed
+        if stray:
+            raise ValueError(f"map_only_columns names tables that are not allowed: {sorted(stray)}")
+        return self
 
-    # dbt materializes marts into the `main` schema (profiles.yml). The guard rejects
-    # any table reference outside these schemas.
-    allowed_schemas: frozenset[str] = frozenset({"main"})
-    # Table allowlist (see ALLOWED_TABLES).
-    allowed_tables: frozenset[str] = frozenset(ALLOWED_TABLES)
 
-    # Hard row cap injected into every executed query (defense against runaway scans).
+class Example(_Strict):
+    """A retrieval exemplar: how people ask -> what holds the answer.
+
+    ``grounds`` is the structured target (table or metric names); ``guidance`` may
+    mention other tables, e.g. to disambiguate, without grounding to them.
+    """
+
+    question: str
+    guidance: str
+    grounds: tuple[str, ...]
+
+
+class GoldPaths(_Strict):
+    answers: Path | None = None
+    retrieval: Path | None = None
+
+
+class Grounding(_Strict):
+    # Below this top-1 dense cosine, retrieval hard-abstains before planning. It is
+    # a lenient pre-filter; the planner is the authoritative abstain decider.
+    threshold: float = 0.56
+    # Why this value: the measured score bands it was picked from.
+    calibration: str = ""
+
+
+class Limits(_Strict):
+    # Hard row cap injected into every executed query.
     max_rows: int = 1000
-    # Backstop on the serialized result (bytes): catches oversized payloads from any
-    # shape of query the guard's column checks don't anticipate.
+    # Backstop on the serialized result size (bytes).
     max_result_bytes: int = 256_000
-    # Wall-clock cap (seconds) on executing a validated query; enforced in
-    # tools.run_validated_sql by a watchdog that interrupts the DuckDB cursor.
+    # Wall-clock cap (seconds) on executing a validated query.
     statement_timeout_s: float = 15.0
+    # Abuse caps for a public chat front end.
+    max_question_chars: int = 500
+    max_per_session: int = 15
+    max_per_day: int = 200
 
 
-DEFAULT_SETTINGS = TiresiasSettings()
+class Chat(_Strict):
+    example_questions: tuple[str, ...] = ()
+
+
+class TiresiasConfig(_Strict):
+    """Everything the engine needs to know about one city's warehouse."""
+
+    # Directory the relative paths resolve against (set by ``load_config``).
+    root: Path = Path(".")
+
+    city: str
+    # One line naming what the warehouse holds; used in prompts and the abstain message.
+    blurb: str
+    warehouse: Path
+    dbt_target: Path
+    metrics: Path
+    gold: GoldPaths = GoldPaths()
+    tables: TableScope
+    examples: tuple[Example, ...] = ()
+    # City-specific caveats the planner must respect (appended to its system prompt).
+    planner_notes: tuple[str, ...] = ()
+    grounding: Grounding = Grounding()
+    limits: Limits = Limits()
+    chat: Chat = Chat()
+
+    @model_validator(mode="after")
+    def _resolve_paths(self) -> Self:
+        # Frozen model: resolve relative paths once, at construction.
+        def resolve(path: Path) -> Path:
+            return path if path.is_absolute() else self.root / path
+
+        for name in ("warehouse", "dbt_target", "metrics"):
+            object.__setattr__(self, name, resolve(getattr(self, name)))
+        object.__setattr__(
+            self,
+            "gold",
+            GoldPaths(
+                answers=resolve(self.gold.answers) if self.gold.answers else None,
+                retrieval=resolve(self.gold.retrieval) if self.gold.retrieval else None,
+            ),
+        )
+        return self
+
+    @property
+    def db_path(self) -> Path:
+        return self.warehouse
+
+    @property
+    def catalog_path(self) -> Path:
+        return self.dbt_target / "catalog.json"
+
+    @property
+    def manifest_path(self) -> Path:
+        return self.dbt_target / "manifest.json"
+
+    @property
+    def metrics_path(self) -> Path:
+        return self.metrics
+
+    def with_limits(self, **overrides: float) -> TiresiasConfig:
+        """A copy with some limits replaced (e.g. a tighter timeout in a test)."""
+        return self.model_copy(update={"limits": self.limits.model_copy(update=overrides)})
+
+
+def load_config(path: Path) -> TiresiasConfig:
+    """Parse and validate a city's ``tiresias.yml``."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Tiresias config not found at {path}")
+    data = yaml.safe_load(path.read_text()) or {}
+    config = TiresiasConfig.model_validate({**data, "root": path.resolve().parent})
+    logger.debug("Loaded config for %s from %s", config.city, path)
+    return config

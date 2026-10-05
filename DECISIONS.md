@@ -26,3 +26,20 @@ eval as proof that the extraction kept the same behavior). In robbins, **Tiresia
 replaces** `nl_sql.py` / `sql_safety.py` / `semantic.py` (rejected: running
 alongside, which leaves two text-to-SQL paths with separate guards to maintain);
 the old modules go once robbins' gold set passes.
+
+## 2026-10-04 — E1/E2 shape of the config-driven engine (drafted by Claude, awaiting Evan's confirmation)
+
+- **E1 and E2 in one branch.** Removing city specifics test-first needs a warehouse
+  to test against, so the synthetic fixture city came first (rejected: E1 against
+  Elvis's real warehouse, which would tie the suite to one city again).
+- **Config beyond the PRD list:** `planner_notes` (city caveats appended to the
+  planner prompt, e.g. "calls for service are not confirmed crimes") and
+  `chat.example_questions` (rejected: keeping those caveats in the engine prompt,
+  which is the city leak E1 removes). Unknown YAML keys are an error (rejected:
+  ignoring them, since a typo in the allowlist key would silently widen or empty scope).
+- **No default config anywhere.** Every module takes the config explicitly
+  (rejected: a module-level default, which is how a city sneaks back in).
+- **Elvis's data lives in `examples/elvis/` until E4** (rejected: deleting it now
+  and rebuilding it in Elvis later from git history).
+- The prompt wording changed slightly where it named Elvis tables; E4's live
+  36/36 run is the check that behavior held.

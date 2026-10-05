@@ -21,40 +21,15 @@ from typing import Literal, Protocol
 import anthropic
 from pydantic import BaseModel
 
+from tiresias.config import TiresiasConfig
+from tiresias.prompts import SYNTHESIZE_SYSTEM, plan_system_prompt
+
 logger = logging.getLogger(__name__)
 
 # Per the claude-api reference: default to Opus 4.8 (exact id, no date suffix).
 DEFAULT_MODEL = "claude-opus-4-8"
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
-
-_PLAN_SYSTEM = (
-    "You are Tiresias, a grounded SQL analyst for the Elvis Las Vegas open-data "
-    "warehouse (restaurant inspections, police calls for service, permits and "
-    "licenses, tourism, weather, air quality, Lake Mead, marriages, rentals, roads, "
-    "parks, public art, and census-tract counts). It is a point-in-time snapshot, "
-    "not live data. You are given the exact schema (tables and "
-    "columns) and the governed metric definitions. Draft exactly ONE read-only "
-    "DuckDB SELECT that answers the user's question using ONLY the listed tables "
-    "and columns, and prefer a governed metric's canonical expression over "
-    "inventing arithmetic. Reference tables by their bare name (e.g. "
-    "mart_restaurants). If the question cannot be answered from these tables and "
-    "columns — including forecasts, live/current conditions, or topics the "
-    "warehouse does not hold — do NOT guess; abstain. Respect each column's "
-    "documented caveats (e.g. police calls for service are not confirmed crimes; "
-    "per-capita tract rates are null unless coverage is 'available'). Tables "
-    "document their coverage period; if a question asks about a period outside "
-    "it (e.g. a year with no loaded data), abstain rather than report a zero. "
-    "Return action='query' with the SQL, or action='abstain' with a brief reason. "
-    "SELECT only; never DDL/DML."
-)
-
-_SYNTHESIZE_SYSTEM = (
-    "You are Tiresias. Answer the user's question using ONLY the query results "
-    "provided — never invent numbers that are not in the results. Be concise and "
-    "factual. The SQL and its source tables are shown to the user separately, so "
-    "do not repeat the SQL. If the results are empty, say so plainly."
-)
 
 
 class PlanDecision(BaseModel):
@@ -81,7 +56,10 @@ class LLMProvider(Protocol):
 class AnthropicProvider:
     """``LLMProvider`` backed by the Anthropic API (via the official SDK)."""
 
-    def __init__(self, model: str = DEFAULT_MODEL, effort: Effort = "medium") -> None:
+    def __init__(
+        self, config: TiresiasConfig, model: str = DEFAULT_MODEL, effort: Effort = "medium"
+    ) -> None:
+        self.plan_system = plan_system_prompt(config)
         self.model = model
         self.effort = effort
         self._client = anthropic.AsyncAnthropic()  # reads ANTHROPIC_API_KEY from env
@@ -100,15 +78,12 @@ class AnthropicProvider:
                 f"\n\nYour previous SQL failed validation:\n{prior_sql}\n"
                 f"Error: {error}\nFix it, or abstain if it cannot be answered."
             )
-        prompt = (
-            f"Schema and governed metrics:\n{grounding}\n\n"
-            f"Question: {question}{repair}"
-        )
+        prompt = f"Schema and governed metrics:\n{grounding}\n\nQuestion: {question}{repair}"
         response = await self._client.messages.parse(
             model=self.model,
             max_tokens=4000,
             thinking={"type": "adaptive"},
-            system=_PLAN_SYSTEM,
+            system=self.plan_system,
             messages=[{"role": "user", "content": prompt}],
             output_format=PlanDecision,
         )
@@ -138,11 +113,9 @@ class AnthropicProvider:
             max_tokens=1500,
             thinking={"type": "adaptive"},
             output_config={"effort": self.effort},
-            system=_SYNTHESIZE_SYSTEM,
+            system=SYNTHESIZE_SYSTEM,
             messages=[{"role": "user", "content": prompt}],
         )
         if response.stop_reason == "refusal":
             return "I can't provide an answer to that."
-        return next(
-            (block.text for block in response.content if block.type == "text"), ""
-        ).strip()
+        return next((block.text for block in response.content if block.type == "text"), "").strip()

@@ -24,19 +24,13 @@ from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
 
-from tiresias.config import DEFAULT_SETTINGS, TiresiasSettings
+from tiresias.config import TiresiasConfig
 from tiresias.mcp_client import WarehouseSession, warehouse_session
+from tiresias.prompts import abstain_message
 from tiresias.provider import AnthropicProvider, LLMProvider
-from tiresias.retrieval import FastEmbedEmbedder, Retriever, SupportsRetrieval
+from tiresias.retrieval import Retriever, SupportsRetrieval
 
 logger = logging.getLogger(__name__)
-
-_ABSTAIN_MESSAGE = (
-    "I can't answer that from the Elvis Las Vegas open-data warehouse, so I'm not "
-    "going to guess. Try a question about what it holds — restaurant inspections, "
-    "police calls, building permits, tourism, weather, air quality, Lake Mead, "
-    "marriages, short-term rentals, road construction, parks, or public art."
-)
 
 
 class TiresiasAnswer(BaseModel):
@@ -68,31 +62,30 @@ class _State(TypedDict, total=False):
 
 
 class TiresiasAgent:
-    """Grounded civic-intelligence agent over the Elvis Las Vegas open-data marts."""
+    """Grounded civic-intelligence agent over one city's open-data warehouse."""
 
     def __init__(
         self,
+        config: TiresiasConfig,
         retriever: SupportsRetrieval | None = None,
         provider: LLMProvider | None = None,
-        settings: TiresiasSettings = DEFAULT_SETTINGS,
         max_repairs: int = 1,
     ) -> None:
+        self.config = config
         # Constructing the default retriever loads the embedding model + corpus once.
-        self.retriever = retriever or Retriever(FastEmbedEmbedder())
-        self.provider = provider or AnthropicProvider()
-        self.settings = settings
+        self.retriever = retriever or Retriever.from_config(config)
+        self.provider = provider or AnthropicProvider(config)
+        self.abstain_message = abstain_message(config)
         self.max_repairs = max_repairs
 
     async def answer(self, question: str) -> TiresiasAnswer:
         """Run the graph for one question and return a cited answer or abstention."""
-        async with warehouse_session() as session:
+        async with warehouse_session(self.config) as session:
             graph = self._build_graph(session)
-            final: _State = await graph.ainvoke(
-                {"question": question, "attempts": 0, "trace": []}
-            )
+            final: _State = await graph.ainvoke({"question": question, "attempts": 0, "trace": []})
         return TiresiasAnswer(
             question=question,
-            answer=final.get("answer", _ABSTAIN_MESSAGE),
+            answer=final.get("answer", self.abstain_message),
             sql=final.get("sql") if not final.get("abstained") else None,
             citations=tuple(final.get("citations", ())),
             abstained=bool(final.get("abstained", False)),
@@ -110,9 +103,7 @@ class TiresiasAgent:
             # supplies the grounded gate and a few relevant exemplars.
             catalog = await session.read_catalog()
             metrics = await session.read_metrics()
-            exemplars = "\n\n".join(
-                h.doc.text for h in hits if h.doc.kind == "exemplar"
-            )
+            exemplars = "\n\n".join(h.doc.text for h in hits if h.doc.kind == "exemplar")
             grounding = f"{catalog}\n\n{metrics}\n\nRelevant examples:\n{exemplars}"
             trace = state["trace"] + [
                 f"retrieve: grounded={grounded} (top score {hits[0].score:.2f})"
@@ -134,9 +125,7 @@ class TiresiasAgent:
         async def execute(state: _State) -> _State:
             payload = await session.run_sql(state["sql"] or "")
             if payload.get("ok"):
-                trace = state["trace"] + [
-                    f"execute: ok, {payload.get('row_count')} rows"
-                ]
+                trace = state["trace"] + [f"execute: ok, {payload.get('row_count')} rows"]
                 return {"result": payload, "error": None, "trace": trace}
             error = payload.get("error", "unknown error")
             trace = state["trace"] + [f"execute: rejected — {error}"]
@@ -163,7 +152,7 @@ class TiresiasAgent:
             reason = state.get("abstain_reason") or state.get("error") or "ungrounded"
             trace = state["trace"] + [f"abstain: {reason}"]
             return {
-                "answer": _ABSTAIN_MESSAGE,
+                "answer": self.abstain_message,
                 "abstained": True,
                 "citations": (),
                 "trace": trace,
@@ -194,9 +183,7 @@ class TiresiasAgent:
         builder.add_edge(START, "retrieve")
         builder.add_conditional_edges("retrieve", after_retrieve, ["plan", "abstain"])
         builder.add_conditional_edges("plan", after_plan, ["execute", "abstain"])
-        builder.add_conditional_edges(
-            "execute", after_execute, ["synthesize", "plan", "abstain"]
-        )
+        builder.add_conditional_edges("execute", after_execute, ["synthesize", "plan", "abstain"])
         builder.add_edge("synthesize", END)
         builder.add_edge("abstain", END)
         return builder.compile()

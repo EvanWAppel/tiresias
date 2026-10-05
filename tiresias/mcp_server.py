@@ -8,7 +8,7 @@ Exposes the Tiresias grounding surface as MCP:
 
 The same server object drives two consumers (PRD Layer 3): the LangGraph agent
 (in-memory transport, see ``tiresias.agent``) and an external client such as Claude
-Code over stdio (``python -m tiresias.mcp_server``). One server, two consumers.
+Code over stdio (``tiresias mcp --config tiresias.yml``). One server, two consumers.
 
 Guard/validation failures are returned as structured ``{ok: false, error: ...}``
 tool output so a consuming agent can read the reason and repair — that is the tool's
@@ -22,7 +22,8 @@ from typing import Any
 
 from mcp.server import MCPServer
 
-from tiresias import tools
+from tiresias import __version__, tools
+from tiresias.config import TiresiasConfig
 from tiresias.sql_guard import SqlGuardError
 
 logger = logging.getLogger(__name__)
@@ -31,29 +32,28 @@ CATALOG_URI = "tiresias://catalog/tables"
 METRICS_URI = "tiresias://metrics/registry"
 
 
-def build_server() -> MCPServer:
-    """Construct the Tiresias MCP server with its resources and tool registered."""
+def build_server(config: TiresiasConfig) -> MCPServer:
+    """Construct the Tiresias MCP server for one city's warehouse."""
     server: MCPServer = MCPServer(
         name="tiresias-warehouse",
-        version="0.0.0",
+        version=__version__,
         instructions=(
-            "Read-only access to the Elvis Las Vegas open-data warehouse (restaurant "
-            "inspections, police calls, permits, tourism, weather, air quality, Lake "
-            "Mead, marriages, rentals, roads, parks, public art, tract counts). Read "
-            "the catalog and metric resources to ground SQL in real columns and the "
-            "governed metrics, then call run_validated_sql. Only the "
-            "allowlisted marts are queryable; the tool is SELECT-only and row-capped."
+            f"Read-only access to the {config.city} open-data warehouse "
+            f"({config.blurb}). Read the catalog and metric resources to ground SQL "
+            "in real columns and the governed metrics, then call run_validated_sql. "
+            "Only the allowlisted tables are queryable; the tool is SELECT-only and "
+            "row-capped."
         ),
     )
 
     @server.resource(
         CATALOG_URI,
         name="Table catalog",
-        description="In-scope marts with columns, types, and dbt descriptions.",
+        description="In-scope tables with columns, types, and dbt descriptions.",
         mime_type="text/plain",
     )
     def catalog_resource() -> str:
-        return tools.catalog_text()
+        return tools.catalog_text(config)
 
     @server.resource(
         METRICS_URI,
@@ -62,29 +62,27 @@ def build_server() -> MCPServer:
         mime_type="text/plain",
     )
     def metrics_resource() -> str:
-        return tools.metrics_text()
+        return tools.metrics_text(config)
 
     @server.tool(
         description=(
-            "Execute a single read-only SELECT against the allowlisted Elvis "
-            "marts. The query is validated (SELECT-only, known tables, EXPLAIN-checked) "
+            f"Execute a single read-only SELECT against the allowlisted {config.city} "
+            "tables. The query is validated (SELECT-only, known tables, EXPLAIN-checked) "
             "and row-capped. Returns rows plus the exact SQL that ran (cite it). On a "
             "validation failure, returns {ok: false, error} so you can repair the SQL."
         )
     )
     def run_validated_sql(sql: str) -> dict[str, Any]:
         try:
-            result = tools.run_validated_sql(sql)
+            result = tools.run_validated_sql(sql, config)
         except (SqlGuardError, tools.QueryTimeoutError, tools.ResultTooLargeError) as exc:
             logger.info("run_validated_sql rejected a query: %s", exc)
             return {"ok": False, "error": str(exc)}
         return {"ok": True, **result.model_dump()}
 
-    @server.tool(
-        description="List the in-scope tables (marts) with their columns and types."
-    )
+    @server.tool(description="List the in-scope tables with their columns and types.")
     def list_tables() -> list[dict[str, Any]]:
-        return tools.list_tables()
+        return tools.list_tables(config)
 
     @server.tool(
         description=(
@@ -94,7 +92,7 @@ def build_server() -> MCPServer:
     )
     def profile_column(table: str, column: str) -> dict[str, Any]:
         try:
-            return {"ok": True, **tools.profile_column(table, column)}
+            return {"ok": True, **tools.profile_column(table, column, config)}
         except KeyError as exc:
             return {"ok": False, "error": str(exc)}
 
@@ -106,17 +104,13 @@ def build_server() -> MCPServer:
     )
     def get_metric(name: str) -> dict[str, Any]:
         try:
-            return {"ok": True, **tools.get_metric(name).model_dump()}
+            return {"ok": True, **tools.get_metric(name, config).model_dump()}
         except KeyError as exc:
             return {"ok": False, "error": str(exc)}
 
     return server
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO)
-    build_server().run(transport="stdio")
-
-
-if __name__ == "__main__":
-    main()
+def serve_stdio(config: TiresiasConfig) -> None:
+    """Run the server over stdio (for Claude Code and other MCP clients)."""
+    build_server(config).run(transport="stdio")

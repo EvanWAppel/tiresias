@@ -1,0 +1,199 @@
+# Tiresias config for Elvis (Las Vegas open data).
+# Reference config extracted from the engine's former built-in constants; Elvis
+# adopts it in E4. Excluded tables: mart_tract_assignment_audit is internal QA
+# bookkeeping; mart_crime_map_sample is a ~1% random sample for the map, so any
+# count from it would be a silent undercount. Map-only columns hold JSON shapes for
+# the map pages (tract boundaries up to ~320 KB per row).
+city: Las Vegas
+blurb: restaurant inspections, police calls for service, building permits and business licenses,
+  tourism, weather, air quality, Lake Mead, marriages, short-term rentals, road construction,
+  parks, public art, and census-tract counts
+warehouse: vegas.duckdb
+dbt_target: target
+metrics: metrics.yml
+gold:
+  answers: evals/gold.yaml
+  retrieval: evals/retrieval_gold.yaml
+tables:
+  schemas:
+  - main
+  allowed:
+  - mart_restaurants
+  - mart_inspection_history
+  - mart_inspection_violations
+  - mart_top_violations
+  - mart_inspections_over_time
+  - mart_crime_by_type
+  - mart_crime_by_hour_weekday
+  - mart_crime_monthly
+  - mart_permits_monthly
+  - mart_permits_by_type
+  - mart_henderson_permits
+  - mart_henderson_licenses_by_type
+  - mart_lvcva_indicators
+  - mart_weather_monthly
+  - mart_weather_extreme_days
+  - mart_air_quality_daily
+  - mart_air_quality_monthly
+  - mart_lake_mead_monthly
+  - mart_marriage_monthly
+  - mart_marriage_daily
+  - mart_marriage_by_origin
+  - mart_marriage_by_gender_year
+  - mart_short_term_rentals
+  - mart_road_construction
+  - mart_parks
+  - mart_art_work_points
+  - mart_public_art_metro
+  - mart_fire_prevention_inspections
+  - mart_tract_metrics
+  excluded:
+  - mart_crime_map_sample
+  - mart_tract_assignment_audit
+  map_only_columns:
+    mart_tract_metrics:
+    - geometry_json
+    mart_road_construction:
+    - path_json
+examples:
+- question: Which restaurants fail health inspections most often?
+  guidance: Use mart_restaurants with the restaurant_failure_rate metric (failure_rate_pct).
+  grounds:
+  - mart_restaurants
+  - restaurant_failure_rate
+- question: What are the most common health code violations?
+  guidance: Use mart_top_violations, ranked by occurrence_count.
+  grounds:
+  - mart_top_violations
+- question: How have restaurant inspection counts changed over time?
+  guidance: Use mart_inspections_over_time, grouped by inspection_month.
+  grounds:
+  - mart_inspections_over_time
+- question: What specific violations did a restaurant receive?
+  guidance: Use mart_inspection_violations joined to mart_restaurants on permit_number.
+  grounds:
+  - mart_inspection_violations
+  - mart_restaurants
+- question: What is the inspection failure rate for a restaurant?
+  guidance: Use the restaurant_failure_rate metric on mart_restaurants.failure_rate_pct.
+  grounds:
+  - restaurant_failure_rate
+  - mart_restaurants
+- question: How many restaurants have been closed by the health district?
+  guidance: Use mart_restaurants (closures, failed_inspections). Road closures are a different
+    domain (mart_road_construction).
+  grounds:
+  - mart_restaurants
+- question: How many police calls were there per month?
+  guidance: Use mart_crime_monthly (incident_month, incident_count). These are LVMPD calls
+    for service, not confirmed crimes.
+  grounds:
+  - mart_crime_monthly
+- question: What are the most common types of police calls?
+  guidance: Use mart_crime_by_type, ranked by incident_count.
+  grounds:
+  - mart_crime_by_type
+- question: What hour of the day has the most police calls?
+  guidance: Use mart_crime_by_hour_weekday, summing incident_count by hour_of_day.
+  grounds:
+  - mart_crime_by_hour_weekday
+- question: How many building permits were issued and what were they worth?
+  guidance: Use mart_permits_monthly or mart_permits_by_type (permit_count, total_valuation)
+    for Las Vegas; mart_henderson_permits for Henderson.
+  grounds:
+  - mart_permits_monthly
+  - mart_permits_by_type
+  - mart_henderson_permits
+- question: How many visitors came to Las Vegas each month?
+  guidance: Use mart_lvcva_indicators where metric ILIKE 'Visitor Volume'.
+  grounds:
+  - mart_lvcva_indicators
+- question: How has gaming revenue changed over time?
+  guidance: Use mart_lvcva_indicators where metric ILIKE 'Gaming Revenue%'; exclude ILIKE
+    '%Clark County%' when summing areas (it is the county total), or use only the Clark County
+    row for a county-wide figure.
+  grounds:
+  - mart_lvcva_indicators
+- question: How many 110 degree days were there each year?
+  guidance: Use mart_weather_extreme_days (days_110f_plus by observed_year).
+  grounds:
+  - mart_weather_extreme_days
+- question: What was the hottest month on record?
+  guidance: Use mart_weather_monthly ordered by record_high_f or avg_high_f.
+  grounds:
+  - mart_weather_monthly
+- question: How bad is the air quality in Las Vegas?
+  guidance: Use mart_air_quality_monthly or mart_air_quality_daily (AQI by parameter).
+  grounds:
+  - mart_air_quality_monthly
+  - mart_air_quality_daily
+- question: How low has Lake Mead's water level dropped?
+  guidance: Use mart_lake_mead_monthly (min_elevation_ft, avg_elevation_ft by reading_month).
+  grounds:
+  - mart_lake_mead_monthly
+- question: Which day of the year has the most weddings?
+  guidance: Use mart_marriage_daily, summing license_count by month_of_year and day_of_month.
+  grounds:
+  - mart_marriage_daily
+- question: Where do couples who marry in Las Vegas come from?
+  guidance: Use mart_marriage_by_origin ranked by license_count.
+  grounds:
+  - mart_marriage_by_origin
+- question: How many same-sex marriages are there each year?
+  guidance: Use mart_marriage_by_gender_year where couple_type = 'Same-sex'.
+  grounds:
+  - mart_marriage_by_gender_year
+- question: How many short-term rentals (Airbnbs) are there in each city?
+  guidance: Use mart_short_term_rentals grouped by jurisdiction.
+  grounds:
+  - mart_short_term_rentals
+- question: Which roads have active construction or closures?
+  guidance: Use mart_road_construction (road_name, status, start_date, end_date); count distinct
+    project_name for projects. is_full_closure is set only on NDOT 511 rows.
+  grounds:
+  - mart_road_construction
+- question: Which parks are largest or have water features?
+  guidance: Use mart_parks (acres, has_water, jurisdiction).
+  grounds:
+  - mart_parks
+- question: Which artists have the most public art pieces?
+  guidance: Use mart_public_art_metro (Las Vegas + Henderson) grouped by artist.
+  grounds:
+  - mart_public_art_metro
+- question: Which apartment complexes have the most fire code violations?
+  guidance: Use mart_fire_prevention_inspections ranked by total_violations.
+  grounds:
+  - mart_fire_prevention_inspections
+- question: Which census tracts have the most police calls per resident?
+  guidance: Use mart_tract_metrics where topic = 'calls', ranked by rate_per_1000 (null unless
+    coverage = 'available').
+  grounds:
+  - mart_tract_metrics
+- question: What kinds of business licenses does Henderson issue?
+  guidance: Use mart_henderson_licenses_by_type (license_count, active_count).
+  grounds:
+  - mart_henderson_licenses_by_type
+planner_notes:
+- Police calls for service are not confirmed crimes.
+- Per-capita tract rates are null unless coverage is 'available'.
+grounding:
+  threshold: 0.56
+  calibration: 'Default fastembed BAAI/bge-small-en-v1.5 on the all-domains corpus: generic
+    off-topic questions measured 0.43-0.555, answerable questions across every domain 0.61-0.83,
+    and subtle unanswerable ones (forecasts, home prices, ''violent crimes downtown'', an
+    out-of-period year) 0.575-0.68, inside the answerable band. 0.56 only screens out the
+    generic band (about 0.05 below the lowest answerable); the planner does the rest of the
+    abstain work.'
+limits:
+  max_rows: 1000
+  max_result_bytes: 256000
+  statement_timeout_s: 15
+  max_question_chars: 500
+  max_per_session: 15
+  max_per_day: 200
+chat:
+  example_questions:
+  - Which restaurants have the highest failure rate?
+  - What hour of the day has the most police calls?
+  - How many 110°F days were there each year?
+  - Which state do most couples marrying in Vegas come from?

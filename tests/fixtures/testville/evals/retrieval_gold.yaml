@@ -1,0 +1,12 @@
+version: 1
+k: 3
+min_recall: 0.75
+cases:
+  - query: Which restaurants fail inspection most often?
+    expect_any: [mart_inspections, inspection_failure_rate]
+  - query: most common health code violations
+    expect_any: [mart_top_violations]
+  - query: service calls per month
+    expect_any: [mart_service_calls_monthly]
+  - query: largest parks by acres
+    expect_any: [mart_park_areas]

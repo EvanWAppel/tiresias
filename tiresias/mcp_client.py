@@ -2,8 +2,8 @@
 
 The agent talks to the warehouse through the *real* MCP protocol — not a shortcut —
 using an in-memory transport so there is no subprocess overhead. External clients
-(e.g. Claude Code) reach the same server over stdio via ``python -m
-tiresias.mcp_server``; this module is the internal consumer.
+(e.g. Claude Code) reach the same server over stdio via ``tiresias mcp``; this
+module is the internal consumer.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from mcp.client._memory import InMemoryTransport
 from mcp.server import MCPServer
 from mcp.types import TextContent, TextResourceContents
 
+from tiresias.config import TiresiasConfig
 from tiresias.mcp_server import CATALOG_URI, METRICS_URI, build_server
 
 logger = logging.getLogger(__name__)
@@ -68,10 +69,10 @@ class WarehouseSession:
 
 @asynccontextmanager
 async def warehouse_session(
-    server: MCPServer | None = None,
+    config: TiresiasConfig, server: MCPServer | None = None
 ) -> AsyncIterator[WarehouseSession]:
     """Open a real MCP session to the Tiresias server over an in-memory transport."""
-    server = server or build_server()
+    server = server or build_server(config)
     async with (
         InMemoryTransport(server, raise_exceptions=True) as (read, write),
         ClientSession(read, write) as session,

@@ -1,0 +1,27 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check tiresias tests
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --check tiresias tests
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: ty
+        name: ty
+        entry: uv run ty check tiresias tests
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: pytest
+        name: hermetic tests
+        entry: uv run pytest -q -m "not slow"
+        language: system
+        pass_filenames: false
+        types: [python]

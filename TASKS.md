@@ -18,21 +18,35 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
 - [x] Created public `EvanWAppel/tiresias`; pushed `main`; standard branch protection
       applied (2026-10-04).
 
-### E1 — Config-driven engine
-- [ ] `tiresias.yml` schema (Pydantic): city, blurb, paths, tables, map-only
-      columns, examples, metrics path, gold paths, threshold, limits.
-- [ ] Remove Elvis specifics from `tiresias/` (allowlist, prompts, exemplars,
-      abstain message); a test fails on any city string in the package.
+### E1 — Config-driven engine (branch `e1-config-engine`, with E2)
+- [x] `tiresias.yml` schema (Pydantic, `tiresias/config.py`): city, blurb, paths
+      (relative to the YAML), table scope + map-only columns, examples, planner
+      notes, metrics path, gold paths, threshold + calibration notes, limits, chat
+      copy. Unknown keys rejected; allowed/excluded overlap rejected.
+- [x] Removed Elvis specifics from `tiresias/`: allowlist, exemplars, threshold,
+      prompts (`tiresias/prompts.py`), abstain message, MCP instructions. Every
+      module takes the config explicitly; no defaults point at a city.
+      `tests/test_no_city_specifics.py` fails on any city/agency name or `mart_`.
+- [x] Elvis's former constants, metrics and gold sets moved to `examples/elvis/`
+      (reference config, seed for E4); validated locally against Elvis's real dbt
+      artifacts (29/29 tables, every example grounds).
 
 ### E2 — Hermetic tests + CI
-- [ ] Synthetic fixture warehouse + minimal dbt artifacts in `conftest.py`.
-- [ ] Port the guard / timeout / map-only / retrieval / agent / MCP tests to it.
-- [ ] CI: ruff, ty, pytest (no network, no key).
+- [x] Synthetic "Testville" city (`tests/fixtures/testville` + `conftest.py`
+      builds its DuckDB warehouse and dbt artifacts in a temp dir).
+- [x] Ported guard / timeout / map-only / catalog / metrics / retrieval / agent /
+      MCP tests: **115 passed** (incl. slow fastembed), ruff + ty clean.
+- [x] CI (`.github/workflows/ci.yml`): ruff, ruff format, ty, pytest (no network,
+      no key). prek hooks run the same.
+- [ ] First green CI run on the PR.
 
 ### E3 — Packaging, CLI, Streamlit extra
 - [ ] `pyproject.toml` (Python 3.12), `tiresias[streamlit]` extra.
-- [ ] CLI: `tiresias mcp`, `tiresias eval`, `tiresias calibrate`.
-- [ ] `render_chat(config)` with the abuse guards; README; tag `v0.1.0`.
+- [ ] CLI: `tiresias mcp`, `tiresias eval`, `tiresias calibrate`. Re-adds, as
+      engine code + hermetic tests, the two harnesses removed in E1: the live gold
+      eval runner and the retrieval recall@k mini-eval.
+- [ ] `render_chat(config)` with the abuse guards (replaces the stale Elvis page
+      `views/tiresias.py`); README; license (Evan's call); tag `v0.1.0`.
 
 ### E4 — Elvis adopts v0.1.0
 - [ ] Elvis: delete `tiresias/`, add `tiresias.yml` + examples/metrics/gold;
