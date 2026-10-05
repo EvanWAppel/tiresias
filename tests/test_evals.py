@@ -131,3 +131,44 @@ def test_calibration_report_separates_answerable_from_abstain(
         if s.expect == "answer" and s.score < config.grounding.threshold
     )
     assert "threshold" in report.to_text()
+
+
+async def test_run_gold_records_a_crashing_case_and_keeps_going(config: TiresiasConfig) -> None:
+    class Flaky:
+        calls = 0
+
+        async def answer(self, question: str) -> TiresiasAnswer:
+            Flaky.calls += 1
+            if Flaky.calls == 1:
+                raise RuntimeError("API overloaded")
+            return BASE_ANSWER.model_copy(update={"abstained": True, "sql": None})
+
+    results = await run_gold(Flaky(), [ANSWER_CASE, ABSTAIN_CASE])
+    assert [r.passed for r in results] == [False, True]
+    assert "RuntimeError: API overloaded" in results[0].reason
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "version: 1\nk: 0\nmin_recall: 0.5\ncases: [{query: q, expect_any: [t]}]\n",
+        "version: 1\nk: 3\nmin_recall: 1.5\ncases: [{query: q, expect_any: [t]}]\n",
+        "version: 1\nk: 3\nmin_recall: 0.5\ncases: []\n",
+    ],
+)
+def test_retrieval_gold_is_range_checked(tmp_path: Path, body: str) -> None:
+    path = tmp_path / "r.yaml"
+    path.write_text(body)
+    with pytest.raises(ValueError):
+        load_retrieval_gold(path)
+
+
+def test_gold_ids_must_be_unique(tmp_path: Path) -> None:
+    path = tmp_path / "gold.yaml"
+    path.write_text(
+        "version: 1\ncases:\n"
+        "  - {id: x, question: a, expect: abstain}\n"
+        "  - {id: x, question: b, expect: abstain}\n"
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        load_gold(path)

@@ -72,6 +72,9 @@ tiresias eval      --config tiresias.yml   retrieval recall@k, then the live gol
 tiresias mcp       --config tiresias.yml   stdio MCP server
 ```
 
+Exit codes: 0 ok, 1 a check or eval failed, 2 the command could not run. Add
+`-v` before the subcommand (`tiresias -v eval ...`) for debug logs on stderr.
+
 To use it from Claude Code: `claude mcp add tiresias -- uv run tiresias mcp --config tiresias.yml`.
 
 ## Development

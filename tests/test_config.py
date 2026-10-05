@@ -157,3 +157,7 @@ def test_elvis_reference_config_loads_and_grounds_to_its_scope() -> None:
         assert set(example.grounds) <= known, example.question
     assert config.gold.answers is not None and config.gold.answers.exists()
     assert config.gold.retrieval is not None and config.gold.retrieval.exists()
+
+
+def test_config_serializes_to_json(config: TiresiasConfig) -> None:
+    assert '"mart_park_areas":["geometry_json"]' in config.model_dump_json()

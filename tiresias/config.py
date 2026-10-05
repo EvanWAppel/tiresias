@@ -24,6 +24,7 @@ from pydantic import (
     Field,
     PositiveFloat,
     PositiveInt,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -56,6 +57,10 @@ class TableScope(_Strict):
     @classmethod
     def _read_only(cls, value: Mapping[str, frozenset[str]]) -> Mapping[str, frozenset[str]]:
         return MappingProxyType(dict(value))
+
+    @field_serializer("map_only_columns")
+    def _plain_dict(self, value: Mapping[str, frozenset[str]]) -> dict[str, list[str]]:
+        return {table: sorted(columns) for table, columns in value.items()}
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:

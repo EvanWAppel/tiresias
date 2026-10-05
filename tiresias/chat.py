@@ -101,8 +101,12 @@ def render_chat(config: TiresiasConfig, agent_factory: Callable[[], Answers] | N
         )
         st.stop()
 
+    # Cached per full config (not just the city), so an edited tiresias.yml gets a
+    # fresh agent with its new allowlist and threshold instead of a stale one.
+    config_key = config.model_dump_json()
+
     @st.cache_resource(show_spinner="Loading the Tiresias agent…")
-    def _agent(city: str) -> Answers:
+    def _agent(config_key: str, factory_key: str) -> Answers:
         if agent_factory is not None:
             return agent_factory()
         from tiresias.agent import TiresiasAgent
@@ -110,10 +114,10 @@ def render_chat(config: TiresiasConfig, agent_factory: Callable[[], Answers] | N
         return TiresiasAgent(config)
 
     @st.cache_resource
-    def _limiter(city: str, max_per_day: int) -> DailyLimiter:
-        return DailyLimiter(max_per_day)
+    def _limiter(city: str) -> DailyLimiter:
+        return DailyLimiter(limits.max_per_day)
 
-    agent = _agent(config.city)
+    agent = _agent(config_key, repr(agent_factory))
 
     if config.chat.example_questions:
         st.markdown("**Try:** " + " · ".join(f"*{q}*" for q in config.chat.example_questions))
@@ -132,7 +136,11 @@ def render_chat(config: TiresiasConfig, agent_factory: Callable[[], Answers] | N
         st.stop()
 
     today = datetime.datetime.now(datetime.UTC).date().isoformat()
-    if not _limiter(config.city, limits.max_per_day).claim(today):
+    # One counter per city for the process; a changed cap applies to it in place,
+    # so lowering the cap mid-day does not restart the count at zero.
+    limiter = _limiter(config.city)
+    limiter.max_per_day = limits.max_per_day
+    if not limiter.claim(today):
         st.warning(
             "Tiresias has reached today's demo query limit. Please check back "
             "tomorrow — this cap keeps the public demo's costs bounded."

@@ -18,12 +18,12 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from tiresias.agent import TiresiasAgent, TiresiasAnswer
+from tiresias.agent import TiresiasAnswer
 from tiresias.config import TiresiasConfig
 from tiresias.retrieval import Retriever
 
@@ -46,6 +46,14 @@ class _GoldFile(_Strict):
     version: int
     cases: tuple[GoldCase, ...]
 
+    @model_validator(mode="after")
+    def _unique_ids(self) -> Self:
+        ids = [case.id for case in self.cases]
+        dupes = sorted({i for i in ids if ids.count(i) > 1})
+        if dupes:
+            raise ValueError(f"duplicate gold case ids: {dupes}")
+        return self
+
 
 class CaseResult(_Strict):
     id: str
@@ -61,9 +69,9 @@ class RetrievalCase(_Strict):
 
 class RetrievalGold(_Strict):
     version: int
-    k: int
-    min_recall: float
-    cases: tuple[RetrievalCase, ...]
+    k: int = Field(ge=1)
+    min_recall: float = Field(ge=0, le=1)
+    cases: tuple[RetrievalCase, ...] = Field(min_length=1)
 
 
 class RecallReport(_Strict):
@@ -160,11 +168,27 @@ def score_case(case: GoldCase, answer: TiresiasAnswer) -> CaseResult:
     return result(True)
 
 
-async def run_gold(agent: TiresiasAgent, cases: Sequence[GoldCase]) -> list[CaseResult]:
-    """Run the agent over every gold case, sequentially, and score each."""
+class Answers(Protocol):
+    async def answer(self, question: str) -> TiresiasAnswer: ...
+
+
+async def run_gold(agent: Answers, cases: Sequence[GoldCase]) -> list[CaseResult]:
+    """Run the agent over every gold case, sequentially, and score each.
+
+    A case whose agent call raises (an API error, a timeout) is logged with its
+    traceback and recorded as a failure, and the remaining cases still run.
+    """
     results = []
     for case in cases:
-        answer = await agent.answer(case.question)
+        try:
+            answer = await agent.answer(case.question)
+        except Exception as exc:
+            logger.exception("gold %s: agent raised", case.id)
+            reason = f"agent raised {type(exc).__name__}: {exc}"
+            results.append(
+                CaseResult(id=case.id, question=case.question, passed=False, reason=reason)
+            )
+            continue
         scored = score_case(case, answer)
         logger.info("gold %s: %s %s", case.id, "PASS" if scored.passed else "FAIL", scored.reason)
         results.append(scored)

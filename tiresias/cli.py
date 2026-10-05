@@ -65,6 +65,9 @@ def _calibrate(config: TiresiasConfig) -> int:
 
 def _eval(config: TiresiasConfig, retrieval_only: bool) -> int:
     retriever = _retriever(config)
+    if retrieval_only and config.gold.retrieval is None:
+        print("no retrieval gold set configured (gold.retrieval)", file=sys.stderr)
+        return 2
     ok = True
     if config.gold.retrieval is not None:
         report = retrieval_recall(retriever, load_retrieval_gold(config.gold.retrieval))
@@ -118,15 +121,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     # MCP speaks over stdout, so logs always go to stderr.
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING, stream=sys.stderr)
-    config = load_config(args.config)
-    if args.command == "check":
-        return _check(config)
-    if args.command == "calibrate":
-        return _calibrate(config)
-    if args.command == "eval":
-        return _eval(config, args.retrieval_only)
-    serve_stdio(config)
-    return 0
+    try:
+        config = load_config(args.config)
+        if args.command == "check":
+            return _check(config)
+        if args.command == "calibrate":
+            return _calibrate(config)
+        if args.command == "eval":
+            return _eval(config, args.retrieval_only)
+        serve_stdio(config)
+        return 0
+    except Exception:
+        # The command could not run (bad config, missing artifacts, ...): show the
+        # full traceback, but exit 2 so CI can tell it apart from a failed check.
+        logger.exception("tiresias %s could not run", args.command)
+        return 2
 
 
 def run() -> None:

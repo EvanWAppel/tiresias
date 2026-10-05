@@ -73,13 +73,22 @@ def test_eval_runs_gold_through_the_agent(
     assert "FAIL off_topic" in out
 
 
-def test_missing_config_is_a_clear_error(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError, match="tiresias.yml"):
-        cli.main(["check", "--config", str(tmp_path / "tiresias.yml")])
-
-
 def test_mcp_serves_stdio(config_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     served = []
     monkeypatch.setattr(cli, "serve_stdio", lambda config: served.append(config.city))
     assert cli.main(["mcp", "--config", str(config_path)]) == 0
     assert served == ["Testville"]
+
+
+def test_command_that_cannot_run_exits_two(tmp_path: Path, caplog) -> None:
+    # Distinguishable from "ran and found problems" (1); the traceback is still logged.
+    assert cli.main(["check", "--config", str(tmp_path / "tiresias.yml")]) == 2
+    assert "could not run" in caplog.text
+    assert "tiresias.yml" in caplog.text
+
+
+def test_retrieval_only_without_a_retrieval_gold_exits_two(config_path: Path, capsys) -> None:
+    bare = config_path.with_name("no_retrieval.yml")
+    bare.write_text(config_path.read_text().replace("  retrieval: evals/retrieval_gold.yaml\n", ""))
+    assert cli.main(["eval", "--config", str(bare), "--retrieval-only"]) == 2
+    assert "gold.retrieval" in capsys.readouterr().err

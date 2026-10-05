@@ -84,3 +84,15 @@ def test_session_cap_blocks_further_questions(
     at.chat_input[0].set_value("how many restaurants?").run()
     at.chat_input[0].set_value("and again?").run()
     assert any("session's limit" in w.value for w in at.warning)
+
+
+def test_agent_cache_is_keyed_on_the_whole_config(app_env: None) -> None:
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(str(Path(__file__).with_name("chat_app_two.py")), default_timeout=30)
+    at.run()
+    at.chat_input[0].set_value("which agent?").run()
+    assert any("agent A" in m.value for m in at.markdown)
+    at.session_state["use_b"] = True
+    at.chat_input[0].set_value("which agent now?").run()
+    assert any("agent B" in m.value for m in at.markdown)
