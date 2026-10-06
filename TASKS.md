@@ -61,13 +61,20 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
       deleted; `tiresias.yml`, `metrics.yml`, `evals/tiresias_*.yaml` added; pinned
       to the v0.1.0 commit archive. `check` clean, recall@3 = 1.00, **live gold
       36/36** (2026-10-05). Review: no HIGH/MEDIUM.
-- [ ] Merge #32 (= deploy; Elvis main auto-deploys) — awaiting Evan.
+- [x] Merged #32 (2026-10-05); Elvis live on the library.
 
-### E5 — Sibling cities
-- [ ] robbins: Tiresias **replaces** `nl_sql.py` / `sql_safety.py` / `semantic.py`
-      (Evan, 2026-10-04); old modules deleted once robbins' gold set passes.
-- [ ] gregan (column docs first).
-- [ ] groening (column docs first).
+### E5 — Sibling cities (2026-10-05)
+Each city: column docs first (written from code by a subagent, unsure claims listed in
+its `TIRESIAS.md` for Evan), `tiresias.yml` + draft gold sets, `views/ask.py` page,
+Dockerfile `dbt docs generate`, config/page tests, calibration, adversarial review.
+Live gold eval and public use wait on each city's dedicated, capped key.
+- [~] gregan (EvanWAppel/gregan#10): 181 docs; 34 marts; threshold 0.60; recall@3 1.00.
+- [~] groening (EvanWAppel/groening#15): 198 docs; 50/51 marts (build metadata
+      excluded); threshold 0.62; recall@3 1.00. Two mixed-case columns need v0.1.1.
+- [~] robbins (EvanWAppel/robbins#23): Tiresias **replaces** nl_sql / sql_safety /
+      catalog; 37 docs sharpened + 37 written; 57/60 marts; threshold 0.63; recall@3 1.00.
+- [ ] v0.1.1 (case-insensitive column docs, #5): merge, tag, bump the three pins.
+- [ ] Live gold evals per city once keys exist; recalibrate after Evan reviews gold sets.
 
 ---
 
