@@ -103,3 +103,40 @@ def test_explain_accepts_valid_query(config: TiresiasConfig) -> None:
         "select permit_number, failure_rate_pct from mart_inspections", config, connection=conn
     )
     assert safe.tables == ("mart_inspections",)
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        # A CTE defined inside a subquery does not cover a reference outside it:
+        # DuckDB resolves the outer name to the real (excluded) table.
+        "select a.audit_id from (with mart_qa_audit as (select 1 as z) "
+        "select z from mart_qa_audit) q, mart_qa_audit a, mart_inspections i",
+        "select s.* from (with stg_service_calls as (select 1 as z) "
+        "select z from stg_service_calls) q, stg_service_calls s, mart_inspections i",
+        # Same trick to reach a file path.
+        'select t.* from (with "/etc/hosts.csv" as (select 1 as z) '
+        'select z from "/etc/hosts.csv") q, "/etc/hosts.csv" t, mart_inspections i',
+        # A CTE in one branch of a union does not cover the other branch.
+        "select * from (with mart_qa_audit as (select 1 as z) select z from mart_qa_audit) "
+        "union all select audit_id from mart_qa_audit",
+    ],
+)
+def test_cte_names_only_cover_their_own_scope(config: TiresiasConfig, sql: str) -> None:
+    with pytest.raises(SqlGuardError, match="allowlist"):
+        guard_sql(sql, config)
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "with a as (select permit_number from mart_inspections), "
+        "b as (select permit_number from a) select * from b",
+        "select * from (with w as (select permit_number from mart_inspections) select * from w) q",
+        # A top-level CTE named like an excluded table only shadows it (harmless).
+        "with mart_qa_audit as (select permit_number from mart_inspections) "
+        "select * from mart_qa_audit",
+    ],
+)
+def test_legitimate_ctes_still_pass(config: TiresiasConfig, sql: str) -> None:
+    assert guard_sql(sql, config).tables == ("mart_inspections",)

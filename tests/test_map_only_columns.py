@@ -72,3 +72,23 @@ def test_oversized_result_is_rejected(config: TiresiasConfig) -> None:
             "select park_name, address from mart_park_areas",
             config.with_limits(max_result_bytes=200),
         )
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        # A positional column-alias list renames the geometry so name checks miss it.
+        "select x from (select * from mart_park_areas) t(a, b, c, x)",
+        "select g from mart_park_areas p(n, ac, ad, g)",
+    ],
+)
+def test_guard_rejects_positional_renames_over_map_only_tables(
+    config: TiresiasConfig, sql: str
+) -> None:
+    with pytest.raises(SqlGuardError, match="map-only"):
+        guard_sql(sql, config)
+
+
+def test_positional_renames_are_fine_without_map_only_tables(config: TiresiasConfig) -> None:
+    safe = guard_sql("select n from mart_inspections i(p, n)", config)
+    assert safe.tables == ("mart_inspections",)

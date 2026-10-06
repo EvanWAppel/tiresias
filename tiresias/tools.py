@@ -64,7 +64,7 @@ def run_validated_sql(sql: str, config: TiresiasConfig) -> QueryResult:
     # preempt DuckDB's native execution, but ``interrupt()`` can. This is the real
     # cost cap behind the row cap (an unfiltered cross-join aggregate defeats limit
     # pushdown and would otherwise run for minutes).
-    cursor = conn.cursor()
+    cursor = db.cursor(conn)
     watchdog = threading.Timer(limits.statement_timeout_s, cursor.interrupt)
     watchdog.start()
     try:
