@@ -54,11 +54,14 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[?]` blocked/de
 - [x] Smoke on Elvis's real artifacts: `check` clean; `calibrate` lowest
       answerable 0.623 vs threshold 0.56 (matches the recorded calibration).
 - [x] PRs #1 and #2 merged (2026-10-05); MIT license (Evan's choice).
-- [ ] Tag `v0.1.0`.
+- [x] Tagged `v0.1.0` (commit `bbb34d6`); installs from GitHub under uv and plain pip.
 
 ### E4 — Elvis adopts v0.1.0
-- [ ] Elvis: delete `tiresias/`, add `tiresias.yml` + examples/metrics/gold;
-      pin `v0.1.0`; live eval 36/36; deploy.
+- [x] Elvis branch `tiresias-v0.1.0` (EvanWAppel/elvis#32): vendored `tiresias/`
+      deleted; `tiresias.yml`, `metrics.yml`, `evals/tiresias_*.yaml` added; pinned
+      to the v0.1.0 commit archive. `check` clean, recall@3 = 1.00, **live gold
+      36/36** (2026-10-05). Review: no HIGH/MEDIUM.
+- [ ] Merge #32 (= deploy; Elvis main auto-deploys) — awaiting Evan.
 
 ### E5 — Sibling cities
 - [ ] robbins: Tiresias **replaces** `nl_sql.py` / `sql_safety.py` / `semantic.py`
