@@ -60,3 +60,21 @@ def test_allowlist_matching_nothing_raises(config: TiresiasConfig) -> None:
     )
     with pytest.raises(ValueError, match="No allowed tables"):
         load_catalog(config.model_copy(update={"tables": scope}))
+
+
+def test_docs_match_mixed_case_columns(config: TiresiasConfig, tmp_path: Path) -> None:
+    # dbt lowercases unquoted column keys in manifest.json, while DuckDB's catalog
+    # keeps the case the column was created with; identifiers are case-insensitive.
+    import json
+
+    target = tmp_path / "target"
+    target.mkdir()
+    catalog = json.loads(config.catalog_path.read_text())
+    node = catalog["nodes"]["model.testville.mart_park_areas"]
+    node["columns"]["Park_Name"] = node["columns"].pop("park_name") | {"name": "Park_Name"}
+    (target / "catalog.json").write_text(json.dumps(catalog))
+    (target / "manifest.json").write_text(config.manifest_path.read_text())
+
+    table = load_catalog(config.model_copy(update={"dbt_target": target})).get("mart_park_areas")
+    by_name = {c.name: c for c in table.columns}
+    assert by_name["Park_Name"].description == "Park name."

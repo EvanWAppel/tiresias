@@ -102,12 +102,18 @@ def load_catalog(config: TiresiasConfig) -> Catalog:
         if name not in config.tables.allowed:
             continue
 
-        doc_columns = manifest_nodes.get(unique_id, {}).get("columns", {})
+        # dbt lowercases unquoted column keys in manifest.json while the warehouse
+        # keeps the created case; DuckDB identifiers are case-insensitive.
+        doc_columns = {
+            key.lower(): doc
+            for key, doc in manifest_nodes.get(unique_id, {}).get("columns", {}).items()
+        }
         columns = tuple(
             Column(
                 name=col["name"],
                 type=col["type"],
-                description=(doc_columns.get(col["name"], {}) or {}).get("description") or "",
+                description=(doc_columns.get(col["name"].lower(), {}) or {}).get("description")
+                or "",
             )
             for col in sorted(node["columns"].values(), key=lambda c: c["index"])
             # Map-only columns are not part of the agent's world (see config).
