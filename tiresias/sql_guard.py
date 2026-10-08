@@ -26,6 +26,7 @@ import sqlglot
 from pydantic import BaseModel
 from sqlglot import exp
 
+from tiresias import db
 from tiresias.config import TiresiasConfig
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,14 @@ def _reject_map_only_references(
     blocked = _map_only_names(map_only, referenced)
     if not blocked:
         return
+    # A positional column-alias list (``t(a, b, x)``) renames columns, so the
+    # name checks below and the DESCRIBE check could no longer see the geometry.
+    for alias in tree.find_all(exp.TableAlias):
+        if alias.columns:
+            raise SqlGuardError(
+                "column alias lists are not allowed in queries over tables with "
+                "map-only columns; alias each selected column instead"
+            )
     row_names = {
         name.lower()
         for table in tree.find_all(exp.Table)
@@ -122,6 +131,29 @@ def _reject_map_only_output(
             )
 
 
+def _is_cte_reference(table: exp.Table) -> bool:
+    """Whether ``table`` names a CTE that is in scope where it is referenced.
+
+    A CTE is visible only inside the query that defines it (its own WITH clause's
+    query, including sibling CTE bodies). Matching names anywhere in the tree is
+    not enough: DuckDB resolves a reference outside that scope to the real table
+    or file of the same name, which would slip past the allowlist.
+    """
+    if table.db or table.catalog:
+        return False  # a qualified name is never a CTE
+    name = table.name
+    node = table.parent
+    while node is not None:
+        # sqlglot names the WITH clause arg "with_" (older releases: "with").
+        with_ = (
+            node.args.get("with_") or node.args.get("with") if isinstance(node, exp.Query) else None
+        )
+        if with_ is not None and any(cte.alias_or_name == name for cte in with_.expressions):
+            return True
+        node = node.parent
+    return False
+
+
 def guard_sql(
     sql: str,
     config: TiresiasConfig,
@@ -151,13 +183,10 @@ def guard_sql(
         if isinstance(node, _FORBIDDEN_NODES):
             raise SqlGuardError(f"forbidden statement type: {type(node).__name__}")
 
-    # CTE names are query-local, not real tables — don't hold them to the allowlist.
-    cte_names = {cte.alias_or_name for cte in tree.find_all(exp.CTE)}
-
     referenced: set[str] = set()
     for table in tree.find_all(exp.Table):
         name = table.name
-        if name in cte_names:
+        if _is_cte_reference(table):
             continue
         schema = table.db  # schema qualifier, "" if unqualified
         if name not in config.tables.allowed:
@@ -180,10 +209,10 @@ def guard_sql(
 
     if connection is not None:
         try:
-            connection.cursor().execute(f"EXPLAIN {final_sql}")
+            db.cursor(connection).execute(f"EXPLAIN {final_sql}")
             # DESCRIBE plans the query (no execution) and reports its output
             # columns — catching star / COLUMNS() expansion of map-only columns.
-            described = connection.cursor().execute(f"DESCRIBE {final_sql}").fetchall()
+            described = db.cursor(connection).execute(f"DESCRIBE {final_sql}").fetchall()
         except duckdb.Error as exc:
             raise SqlGuardError(f"query failed catalog validation: {exc}") from exc
         _reject_map_only_output(described, referenced, map_only)

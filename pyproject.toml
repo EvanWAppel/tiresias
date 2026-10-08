@@ -1,6 +1,6 @@
 [project]
 name = "tiresias"
-version = "0.1.0"
+version = "0.1.1"
 description = "Grounded text-to-SQL agent for dbt + DuckDB warehouses: cites its SQL, abstains when it can't ground an answer."
 readme = "README.md"
 license = "MIT"
