@@ -68,13 +68,18 @@ Each city: column docs first (written from code by a subagent, unsure claims lis
 its `TIRESIAS.md` for Evan), `tiresias.yml` + draft gold sets, `views/ask.py` page,
 Dockerfile `dbt docs generate`, config/page tests, calibration, adversarial review.
 Live gold eval and public use wait on each city's dedicated, capped key.
-- [~] gregan (EvanWAppel/gregan#10): 181 docs; 34 marts; threshold 0.60; recall@3 1.00.
-- [~] groening (EvanWAppel/groening#15): 198 docs; 50/51 marts (build metadata
+City PR states checked read-only with `gh pr view` on 2026-10-22.
+- [x] gregan (EvanWAppel/gregan#10, merged 2026-10-08, CI green): 181 docs; 34 marts;
+      threshold 0.60; recall@3 1.00.
+- [x] groening (EvanWAppel/groening#15, merged 2026-10-08, CI green): 198 docs; 50/51 marts (build metadata
       excluded); threshold 0.62; recall@3 1.00. Two mixed-case columns need v0.1.1.
-- [~] robbins (EvanWAppel/robbins#23): Tiresias **replaces** nl_sql / sql_safety /
+- [x] robbins (EvanWAppel/robbins#23, merged 2026-10-11, CI green): Tiresias **replaces** nl_sql / sql_safety /
       catalog; 37 docs sharpened + 37 written; 57/60 marts; threshold 0.63; recall@3 1.00.
 - [~] v0.1.1 (case-insensitive column docs + CTE-scope allowlist fix + locked-down
       DuckDB, #5): merged 2026-10-08 (`0ae9123`), `pyproject` at 0.1.1.
+      - [x] `CHANGELOG.md` with v0.1.0 and v0.1.1 notes (changes, security fixes,
+            SHAs), ready for the tag; `tests/test_changelog.py` keeps it in step
+            with `__version__`.
       - [ ] Tag `v0.1.1` on `0ae9123` (Evan; pushing a release tag).
       - [ ] Bump the pins: gregan, groening, robbins **and elvis** still pin the v0.1.0
             archive (`bbb34d6`) as of 2026-10-17, so none has the CTE-scope fix yet.
@@ -201,6 +206,9 @@ RAG, LangGraph, and an eval harness — in miniature but real, deployed, and lin
   (`duckdb_settings()`, `pragma_table_info`, `information_schema`), alias-spoof of a
   file-read fn as an allowed table, UNION-to-function, multi-statement, ATTACH/DDL/DML.
   The read-only connection + SELECT-only + table allowlist + EXPLAIN + row cap hold.
+- [x] Guard rejects settings/environment/introspection functions (`current_setting`,
+      `getenv`, `duckdb_*`, `pragma_*`, …) in any position — closes the LOW finding in
+      `reviews/2026-10-05-city-adoption-security.md`.
 - [x] App-side guards in `views/tiresias.py`: input-length cap, per-session cap, and a
       process-wide daily circuit breaker (all env-overridable: `TIRESIAS_MAX_*`).
       Safe error handling (no tracebacks leak to the public UI).
@@ -309,7 +317,7 @@ Phase-0 domain (restaurant marts), expand outward.
 ### P3.2 — Later in Phase 3
 - [ ] Governed metrics for non-restaurant domains (one domain at a time).
 - [ ] Cross-domain joins (e.g. weather × inspections, tourism × crime).
-- [ ] Bedrock provider behind the shim.
+- [x] Bedrock provider behind the shim. (`BedrockProvider`, extra `tiresias[bedrock]`; fake-client tests, no live AWS call.)
 
 ## Deferred to later phases (not Phase 0)
 - CI eval-regression gate + restaurant-mart seeds/contracts → Phase 1/Phase 4 (PRD).

@@ -1,0 +1,40 @@
+# Drafted by the 2026-10-24 weekend prep session on 2026-10-22 from the repo's own code and
+# docs; not yet verified by a tiresias session. Format: _system/docs/project-toml.md
+
+[project]
+name = "tiresias"
+group = "portfolio"
+kind = "library"            # installed and pinned by city apps (elvis, robbins, gregan, groening)
+status = "active"
+repo = "EvanWAppel/tiresias"
+visibility = "public"
+on_site = false             # no mention found in enki's source on 2026-10-22
+verified = false
+
+[deploy]
+host = "none"               # a library; each city app deploys it on its own Railway service
+services = []
+domain = ""
+origin_urls_closed = false
+
+[auth]
+scheme = "none"
+access_list = ""
+target = "none"
+
+[data]
+db = "none"                 # reads each city's DuckDB warehouse READ_ONLY; owns no store
+
+[demo]
+status = "none"             # public pages live in the city apps
+url = ""
+path = ""
+
+[keys]
+paid = []                   # the engine reads ANTHROPIC_API_KEY of the host app; per-city keys
+                            # (isolation, spend cap) are tracked in each city's project.toml
+isolated = "n/a"
+spend_cap = "n/a"
+
+[platform]
+done = []

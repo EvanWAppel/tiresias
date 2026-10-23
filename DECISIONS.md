@@ -58,3 +58,27 @@ the old modules go once robbins' gold set passes.
 - **Chat caps:** `limits:` in the YAML, overridable by the same `TIRESIAS_MAX_*`
   env vars Elvis already uses on Railway (rejected: env-only, which hides each
   city's defaults from review).
+
+## 2026-10-24 — P3.2 Bedrock provider shape (drafted by Claude, awaiting Evan's confirmation)
+
+- **`BedrockProvider(config, *, model, aws_region, aws_profile=None, effort="medium",
+  client=None)`** in `tiresias/provider.py`, a subclass of `AnthropicProvider` that only
+  swaps the client. Same prompts, structured-output planning, refusal-as-abstention and
+  50-row synthesis cap (rejected: a parallel implementation, which lets the two drift).
+- **Client: the SDK's `AsyncAnthropicBedrockMantle`** (the Messages API on Bedrock),
+  which the Anthropic SDK recommends for new code (rejected: the legacy
+  `AsyncAnthropicBedrock` InvokeModel path).
+- **Config shape: constructor arguments, not `tiresias.yml`.** A city picks Bedrock by
+  passing `provider=BedrockProvider(...)` to `TiresiasAgent` (or via `render_chat`'s
+  `agent_factory`). `model` (a Bedrock id, e.g. `anthropic.claude-opus-4-8`) and
+  `aws_region` are required with no default, matching "no default config" (rejected:
+  an `llm:` YAML block now, which would widen the strict schema before any city needs
+  it; easy to add later as `llm: {provider: bedrock, model: ..., aws_region: ...}`).
+- **Credentials only from the standard boto3 chain** (env, `aws_profile`, instance or
+  task role). Tiresias never accepts AWS keys as arguments, so none land in config or
+  code. The personal-key guardrail applies: a dedicated AWS account/role per app,
+  scoped to Bedrock invoke, with a budget alarm.
+- **Optional extra `tiresias[bedrock]`** = `anthropic[bedrock]` (boto3 + botocore), so
+  cities on the Anthropic API don't pull boto3. Constructing the provider without the
+  extra raises an `ImportError` naming the extra. Tests use an injected fake client and
+  make no AWS call; no live Bedrock run has been made.

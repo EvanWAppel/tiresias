@@ -22,6 +22,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+bedrock = [
+    "anthropic[bedrock]>=0.122.0",
+]
 streamlit = [
     "streamlit>=1.61.1",
 ]

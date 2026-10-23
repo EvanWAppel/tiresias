@@ -45,6 +45,56 @@ _FORBIDDEN_NODES: tuple[type[exp.Expression], ...] = (
     exp.Copy,
 )
 
+# Functions that expose engine settings, the process environment, the catalog or the
+# session rather than warehouse data (or that run SQL text / glob the filesystem).
+# Matched case-insensitively by name, in any position (scalar, table-valued, lambda).
+_FORBIDDEN_FUNCTIONS: frozenset[str] = frozenset(
+    {
+        "current_setting",
+        "getenv",
+        "getvariable",
+        "which_secret",
+        "current_query",
+        "current_database",
+        "current_schema",
+        "current_schemas",
+        "current_catalog",
+        "current_user",
+        "current_role",
+        "session_user",
+        "user",
+        "version",
+        "query",
+        "query_table",
+        "glob",
+        "txid_current",
+    }
+)
+_FORBIDDEN_FUNCTION_PREFIXES: tuple[str, ...] = ("duckdb_", "pragma_", "pg_")
+# sqlglot parses some of these into typed nodes rather than ``exp.Anonymous``.
+_FORBIDDEN_FUNCTION_NODES: tuple[type[exp.Expression], ...] = (
+    exp.CurrentCatalog,
+    exp.CurrentDatabase,
+    exp.CurrentRole,
+    exp.CurrentSchema,
+    exp.CurrentSchemas,
+    exp.CurrentUser,
+    exp.CurrentVersion,
+    exp.SessionUser,
+    exp.Version,
+)
+
+
+def _forbidden_function(node: exp.Expr) -> str | None:
+    """The name of a settings/introspection function call, or None if ``node`` is fine."""
+    if isinstance(node, _FORBIDDEN_FUNCTION_NODES):
+        return node.sql_name().lower() if isinstance(node, exp.Func) else type(node).__name__
+    if isinstance(node, exp.Anonymous):
+        name = node.name.lower()
+        if name in _FORBIDDEN_FUNCTIONS or name.startswith(_FORBIDDEN_FUNCTION_PREFIXES):
+            return name
+    return None
+
 
 class SqlGuardError(ValueError):
     """Raised when agent-drafted SQL violates the read-only safety policy."""
@@ -182,6 +232,12 @@ def guard_sql(
     for node in tree.walk():
         if isinstance(node, _FORBIDDEN_NODES):
             raise SqlGuardError(f"forbidden statement type: {type(node).__name__}")
+        function = _forbidden_function(node)
+        if function is not None:
+            raise SqlGuardError(
+                f"function {function!r} is not allowed: settings, environment and "
+                "catalog introspection are off limits"
+            )
 
     referenced: set[str] = set()
     for table in tree.find_all(exp.Table):
