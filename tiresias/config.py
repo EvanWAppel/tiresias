@@ -113,6 +113,9 @@ class Limits(_Strict):
 
 class Chat(_Strict):
     example_questions: tuple[str, ...] = ()
+    # Show guard/DuckDB rejection text in the public trace panel. Off by default:
+    # error messages name tables, schemas and columns to anonymous visitors.
+    show_rejections: bool = False
 
 
 class TiresiasConfig(_Strict):

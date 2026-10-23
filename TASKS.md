@@ -75,15 +75,28 @@ City PR states checked read-only with `gh pr view` on 2026-10-22.
       excluded); threshold 0.62; recall@3 1.00. Two mixed-case columns need v0.1.1.
 - [x] robbins (EvanWAppel/robbins#23, merged 2026-10-11, CI green): Tiresias **replaces** nl_sql / sql_safety /
       catalog; 37 docs sharpened + 37 written; 57/60 marts; threshold 0.63; recall@3 1.00.
-- [~] v0.1.1 (case-insensitive column docs + CTE-scope allowlist fix + locked-down
+- [x] v0.1.1 (case-insensitive column docs + CTE-scope allowlist fix + locked-down
       DuckDB, #5): merged 2026-10-08 (`0ae9123`), `pyproject` at 0.1.1.
       - [x] `CHANGELOG.md` with v0.1.0 and v0.1.1 notes (changes, security fixes,
             SHAs), ready for the tag; `tests/test_changelog.py` keeps it in step
             with `__version__`.
-      - [ ] Tag `v0.1.1` on `0ae9123` (Evan; pushing a release tag).
-      - [ ] Bump the pins: gregan, groening, robbins **and elvis** still pin the v0.1.0
-            archive (`bbb34d6`) as of 2026-10-17, so none has the CTE-scope fix yet.
-- [ ] Live gold evals per city once keys exist; recalibrate after Evan reviews gold sets.
+      - [x] Tag `v0.1.1` on `0ae9123` (Evan, tagged and pushed 2026-10-23).
+      - [~] Bump the pins: gregan, groening, robbins **and elvis** from the v0.1.0
+            archive (`bbb34d6`) to v0.1.1; one pin-bump PR per city repo opened
+            2026-10-23 (merging is Evan's).
+- [x] Dedicated Anthropic keys: gregan, groening, robbins and elvis each run on their
+      own workspace with a scoped key and a $10 spend cap (Evan confirmed in blocker
+      triage 2026-10-23). Robbins' old "user's own key" concern is closed by this.
+- [x] Trace panel hides rejection text on public pages (review E3 #6; Evan, blocker
+      triage 2026-10-23): `chat.show_rejections` (default `false`) and
+      `tiresias.chat.public_trace` redact guard/DuckDB error text in the Trace expander.
+      Cities get it with the next tag; no city-side change needed unless a page wants
+      the full text.
+- [ ] v0.1.2: the Unreleased `current_setting()`/introspection guard fix (`fd05cba`)
+      and the hidden rejection text need a `v0.1.2` tag (version bump + CHANGELOG date
+      in a PR, then Evan tags; see `BLOCKED.md`), then a second round of city pin bumps.
+- [ ] Live gold evals per city now that keys exist; recalibrate after Evan reviews gold
+      sets (runs need Evan's go-ahead, since they spend against the city keys).
 
 ---
 

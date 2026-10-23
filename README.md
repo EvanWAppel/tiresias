@@ -62,6 +62,9 @@ A public page needs `ANTHROPIC_API_KEY` from a **dedicated, scoped,
 spend-capped key for that app**, never a personal one. The chat's own caps
 (question length, per session, per day) come from `limits:` and can be
 overridden with `TIRESIAS_MAX_*` environment variables.
+The Trace expander hides guard and DuckDB rejection text by default, since error
+messages can name tables and columns; set `chat.show_rejections: true` to show it
+(e.g. on a private page).
 
 To run Claude on Amazon Bedrock instead, install the `tiresias[bedrock]` extra and
 hand the chat an agent built on `BedrockProvider` (model id and region are

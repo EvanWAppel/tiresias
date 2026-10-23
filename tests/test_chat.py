@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tiresias.chat import DailyLimiter, limits_from_env, question_problem
+from tiresias.chat import DailyLimiter, limits_from_env, public_trace, question_problem
 from tiresias.config import TiresiasConfig
 
 APP = str(Path(__file__).with_name("chat_app.py"))
@@ -34,6 +34,42 @@ def test_question_problem(config: TiresiasConfig) -> None:
     assert question_problem("how many?", used=0, limits=limits) is None
     assert "too long" in (question_problem("x" * 501, used=0, limits=limits) or "")
     assert "limit" in (question_problem("q", used=limits.max_per_session, limits=limits) or "")
+
+
+REJECTED_TRACE = (
+    "retrieve: grounded=True (top score 0.80)",
+    "plan: action=query",
+    "execute: rejected — Table 'secret_schema.hidden' is not in the allowlist",
+    "plan: action=query",
+    'execute: rejected — Binder Error: column "ssn" not found',
+    'abstain: Binder Error: column "ssn" not found',
+)
+
+
+def test_chat_hides_rejection_text_by_default(config: TiresiasConfig) -> None:
+    assert config.chat.show_rejections is False
+
+
+def test_public_trace_redacts_rejection_text() -> None:
+    shown = public_trace(REJECTED_TRACE, show_rejections=False)
+    assert len(shown) == len(REJECTED_TRACE)
+    joined = "\n".join(shown)
+    assert "secret_schema" not in joined
+    assert "ssn" not in joined
+    assert "Binder Error" not in joined
+    assert shown[2] == "execute: rejected (details hidden)"
+    assert shown[5] == "abstain: query rejected (details hidden)"
+    # Steps without guard or DuckDB error text are kept as they are.
+    assert shown[:2] == REJECTED_TRACE[:2]
+
+
+def test_public_trace_keeps_planner_abstain_reasons() -> None:
+    trace = ("plan: action=abstain", "abstain: outside the data")
+    assert public_trace(trace, show_rejections=False) == trace
+
+
+def test_public_trace_shows_everything_when_enabled() -> None:
+    assert public_trace(REJECTED_TRACE, show_rejections=True) == REJECTED_TRACE
 
 
 @pytest.fixture
@@ -96,3 +132,12 @@ def test_agent_cache_is_keyed_on_the_whole_config(app_env: None) -> None:
     at.session_state["use_b"] = True
     at.chat_input[0].set_value("which agent now?").run()
     assert any("agent B" in m.value for m in at.markdown)
+
+
+def test_page_trace_hides_rejection_text(app_env: None) -> None:
+    at = _app().run()
+    at.chat_input[0].set_value("rejected please").run()
+    assert not at.exception
+    texts = [t.value for t in at.text]
+    assert "execute: rejected (details hidden)" in texts
+    assert not any("secret_schema" in t for t in texts)
