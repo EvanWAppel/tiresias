@@ -11,7 +11,8 @@ ground an answer. City apps install it and pin a tag: Elvis (live), plus robbins
 - v0.1.1 is merged (`0ae9123`, `pyproject` 0.1.1). It holds the case-insensitive column docs, the
   CTE-scope allowlist fix and the locked-down DuckDB. It is **not tagged yet**, and every city
   still pins v0.1.0 (see BLOCKED.md).
-- E5 city PRs are open in the city repos (gregan#10, groening#15, robbins#23). No open PRs in this repo.
+- E5 city PRs are merged (gregan#10 and groening#15 on 2026-10-08, robbins#23 on 2026-10-11; checked
+  read-only 2026-10-22). No open PRs in this repo.
 - Tests on main: `194 passed, 1 deselected` (the slow one) in about 3 min. ruff, ruff format and ty are clean.
 - The repo has no CLAUDE.md. The house rules below come from PRD.md, TASKS.md and DECISIONS.md.
 

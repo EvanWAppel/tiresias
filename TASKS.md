@@ -68,10 +68,12 @@ Each city: column docs first (written from code by a subagent, unsure claims lis
 its `TIRESIAS.md` for Evan), `tiresias.yml` + draft gold sets, `views/ask.py` page,
 Dockerfile `dbt docs generate`, config/page tests, calibration, adversarial review.
 Live gold eval and public use wait on each city's dedicated, capped key.
-- [~] gregan (EvanWAppel/gregan#10): 181 docs; 34 marts; threshold 0.60; recall@3 1.00.
-- [~] groening (EvanWAppel/groening#15): 198 docs; 50/51 marts (build metadata
+City PR states checked read-only with `gh pr view` on 2026-10-22.
+- [x] gregan (EvanWAppel/gregan#10, merged 2026-10-08, CI green): 181 docs; 34 marts;
+      threshold 0.60; recall@3 1.00.
+- [x] groening (EvanWAppel/groening#15, merged 2026-10-08, CI green): 198 docs; 50/51 marts (build metadata
       excluded); threshold 0.62; recall@3 1.00. Two mixed-case columns need v0.1.1.
-- [~] robbins (EvanWAppel/robbins#23): Tiresias **replaces** nl_sql / sql_safety /
+- [x] robbins (EvanWAppel/robbins#23, merged 2026-10-11, CI green): Tiresias **replaces** nl_sql / sql_safety /
       catalog; 37 docs sharpened + 37 written; 57/60 marts; threshold 0.63; recall@3 1.00.
 - [~] v0.1.1 (case-insensitive column docs + CTE-scope allowlist fix + locked-down
       DuckDB, #5): merged 2026-10-08 (`0ae9123`), `pyproject` at 0.1.1.
