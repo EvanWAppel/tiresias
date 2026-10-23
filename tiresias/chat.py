@@ -20,7 +20,7 @@ import datetime
 import logging
 import os
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Protocol
 
 from tiresias.agent import TiresiasAnswer
@@ -79,6 +79,32 @@ def question_problem(question: str, used: int, limits: Limits) -> str | None:
     if len(question) > limits.max_question_chars:
         return "That question is too long — please shorten it."
     return None
+
+
+_REJECTED = "execute: rejected — "
+_ABSTAIN = "abstain: "
+
+
+def public_trace(trace: Sequence[str], *, show_rejections: bool) -> tuple[str, ...]:
+    """The trace as shown on the page, with rejection text redacted unless enabled.
+
+    Guard and DuckDB error messages can name tables, schemas and columns, so a
+    public page hides them: a rejected step keeps its outcome but drops the text,
+    and an abstain step that repeats a rejection error is redacted the same way.
+    """
+    if show_rejections:
+        return tuple(trace)
+    errors: set[str] = set()
+    shown: list[str] = []
+    for step in trace:
+        if step.startswith(_REJECTED):
+            errors.add(step.removeprefix(_REJECTED))
+            shown.append("execute: rejected (details hidden)")
+        elif step.startswith(_ABSTAIN) and step.removeprefix(_ABSTAIN) in errors:
+            shown.append("abstain: query rejected (details hidden)")
+        else:
+            shown.append(step)
+    return tuple(shown)
 
 
 def render_chat(config: TiresiasConfig, agent_factory: Callable[[], Answers] | None = None) -> None:
@@ -170,5 +196,5 @@ def render_chat(config: TiresiasConfig, agent_factory: Callable[[], Answers] | N
                 st.caption("Cited sources: " + ", ".join(f"`{c}`" for c in result.citations))
 
         with st.expander("Trace (plan → execute → answer)"):
-            for step in result.trace:
+            for step in public_trace(result.trace, show_rejections=config.chat.show_rejections):
                 st.text(step)

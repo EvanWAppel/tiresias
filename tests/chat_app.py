@@ -19,6 +19,19 @@ class FakeAgent:
                 abstained=True,
                 trace=("abstain: ungrounded",),
             )
+        if "rejected" in question:
+            return TiresiasAnswer(
+                question=question,
+                answer="I can't answer that.",
+                sql=None,
+                citations=(),
+                abstained=True,
+                trace=(
+                    "plan: action=query",
+                    "execute: rejected — Table 'secret_schema.hidden' is not in the allowlist",
+                    "abstain: Table 'secret_schema.hidden' is not in the allowlist",
+                ),
+            )
         return TiresiasAnswer(
             question=question,
             answer="There are 50 restaurants.",

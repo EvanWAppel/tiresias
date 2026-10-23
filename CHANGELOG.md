@@ -7,6 +7,9 @@ is only usable once its tag exists.
 
 ## [Unreleased]
 
+Not tagged yet. The `current_setting()` guard fix below needs a `v0.1.2` tag before the
+cities can pin it (see `BLOCKED.md`).
+
 ### Security
 - The SQL guard rejects settings, environment and introspection functions anywhere in
   a query (scalar, table-valued and lambda positions): `current_setting`, `getenv`,
@@ -14,12 +17,20 @@ is only usable once its tag exists.
   `query`/`query_table`, `glob`, and every `duckdb_*`, `pragma_*` and `pg_*` function.
   Closes the LOW `current_setting()` finding in
   `reviews/2026-10-05-city-adoption-security.md` (`fd05cba`).
+- The chat's trace panel no longer shows guard or DuckDB rejection text by default:
+  a rejected step reads `execute: rejected (details hidden)`, so anonymous visitors
+  on a public page don't see schema detail from error messages (review E3 #6). Set
+  `chat.show_rejections: true` in `tiresias.yml` to show the full text, e.g. on a
+  private page.
+
+### Added
+- `chat.show_rejections` config key (default `false`) and `tiresias.chat.public_trace`.
 
 ## [0.1.1] - 2026-10-07
 
-Merged as PR #5 (`0ae9123`). **Not tagged yet**: the tag goes on `0ae9123`, and every
-city still pins v0.1.0 until it exists (see `BLOCKED.md`). Upgrade as soon as it is
-tagged; v0.1.0 has the HIGH allowlist bypass below.
+Merged as PR #5 and tagged `v0.1.1` on `0ae9123` (2026-10-23). Upgrade from v0.1.0,
+which has the HIGH allowlist bypass below; the city pin bumps (gregan, groening,
+robbins, elvis) are open as one PR per city repo.
 
 ### Security
 - **HIGH: CTE-scope allowlist bypass.** The guard exempted any table whose name matched

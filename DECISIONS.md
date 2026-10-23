@@ -82,3 +82,16 @@ the old modules go once robbins' gold set passes.
   cities on the Anthropic API don't pull boto3. Constructing the provider without the
   extra raises an `ImportError` naming the extra. Tests use an injected fake client and
   make no AWS call; no live Bedrock run has been made.
+
+## 2026-10-23 — Public trace panel hides rejection text (confirmed by Evan, blocker triage 2026-10-23)
+
+The chat's Trace expander no longer shows guard or DuckDB rejection text unless a city
+opts in: `chat.show_rejections` in `tiresias.yml`, default `false`. With it off,
+`execute: rejected — <error>` becomes `execute: rejected (details hidden)`, and an
+`abstain:` step that repeats a rejection error becomes `abstain: query rejected (details
+hidden)`; planner abstain reasons and other steps stay as they are. The fix lives in
+Tiresias (`tiresias/chat.py`), so every city picks it up with its next pin bump
+(rejected: keeping the trace as-is for transparency, since the review (E3 #6) flagged
+that error text leaks table, schema and column names to anonymous visitors; rejected:
+fixing it in each city app, which would leave four copies to keep in step). The agent's
+own `TiresiasAnswer.trace` still carries the full text for logs and evals.
