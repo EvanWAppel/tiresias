@@ -63,6 +63,22 @@ spend-capped key for that app**, never a personal one. The chat's own caps
 (question length, per session, per day) come from `limits:` and can be
 overridden with `TIRESIAS_MAX_*` environment variables.
 
+To run Claude on Amazon Bedrock instead, install the `tiresias[bedrock]` extra and
+hand the chat an agent built on `BedrockProvider` (model id and region are
+required; AWS credentials come from the standard boto3 chain, never arguments):
+
+```python
+from tiresias.agent import TiresiasAgent
+from tiresias.provider import BedrockProvider
+
+config = load_config(Path("tiresias.yml"))
+provider = BedrockProvider(config, model="anthropic.claude-opus-4-8", aws_region="us-east-1")
+render_chat(config, agent_factory=lambda: TiresiasAgent(config, provider=provider))
+```
+
+The same guardrail applies: a dedicated AWS account or role for the app, scoped to
+Bedrock invoke, with a budget alarm.
+
 ## Command line
 
 ```

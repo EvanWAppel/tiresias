@@ -317,7 +317,7 @@ Phase-0 domain (restaurant marts), expand outward.
 ### P3.2 — Later in Phase 3
 - [ ] Governed metrics for non-restaurant domains (one domain at a time).
 - [ ] Cross-domain joins (e.g. weather × inspections, tourism × crime).
-- [ ] Bedrock provider behind the shim.
+- [x] Bedrock provider behind the shim. (`BedrockProvider`, extra `tiresias[bedrock]`; fake-client tests, no live AWS call.)
 
 ## Deferred to later phases (not Phase 0)
 - CI eval-regression gate + restaurant-mart seeds/contracts → Phase 1/Phase 4 (PRD).
