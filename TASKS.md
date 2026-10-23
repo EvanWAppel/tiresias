@@ -75,6 +75,9 @@ Live gold eval and public use wait on each city's dedicated, capped key.
       catalog; 37 docs sharpened + 37 written; 57/60 marts; threshold 0.63; recall@3 1.00.
 - [~] v0.1.1 (case-insensitive column docs + CTE-scope allowlist fix + locked-down
       DuckDB, #5): merged 2026-10-08 (`0ae9123`), `pyproject` at 0.1.1.
+      - [x] `CHANGELOG.md` with v0.1.0 and v0.1.1 notes (changes, security fixes,
+            SHAs), ready for the tag; `tests/test_changelog.py` keeps it in step
+            with `__version__`.
       - [ ] Tag `v0.1.1` on `0ae9123` (Evan; pushing a release tag).
       - [ ] Bump the pins: gregan, groening, robbins **and elvis** still pin the v0.1.0
             archive (`bbb34d6`) as of 2026-10-17, so none has the CTE-scope fix yet.
