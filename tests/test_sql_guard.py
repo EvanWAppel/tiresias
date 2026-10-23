@@ -174,7 +174,7 @@ def test_legitimate_ctes_still_pass(config: TiresiasConfig, sql: str) -> None:
     ],
 )
 def test_rejects_settings_and_introspection_functions(config: TiresiasConfig, sql: str) -> None:
-    with pytest.raises(SqlGuardError, match="not allowed"):
+    with pytest.raises(SqlGuardError, match=r"^function .* is not allowed"):
         guard_sql(sql, config)
 
 
