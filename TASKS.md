@@ -201,6 +201,9 @@ RAG, LangGraph, and an eval harness — in miniature but real, deployed, and lin
   (`duckdb_settings()`, `pragma_table_info`, `information_schema`), alias-spoof of a
   file-read fn as an allowed table, UNION-to-function, multi-statement, ATTACH/DDL/DML.
   The read-only connection + SELECT-only + table allowlist + EXPLAIN + row cap hold.
+- [x] Guard rejects settings/environment/introspection functions (`current_setting`,
+      `getenv`, `duckdb_*`, `pragma_*`, …) in any position — closes the LOW finding in
+      `reviews/2026-10-05-city-adoption-security.md`.
 - [x] App-side guards in `views/tiresias.py`: input-length cap, per-session cap, and a
       process-wide daily circuit breaker (all env-overridable: `TIRESIAS_MAX_*`).
       Safe error handling (no tracebacks leak to the public UI).

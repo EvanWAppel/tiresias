@@ -140,3 +140,53 @@ def test_cte_names_only_cover_their_own_scope(config: TiresiasConfig, sql: str) 
 )
 def test_legitimate_ctes_still_pass(config: TiresiasConfig, sql: str) -> None:
     assert guard_sql(sql, config).tables == ("mart_inspections",)
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        # Settings and environment: reveal paths, extension dirs, env vars.
+        "select current_setting('home_directory') from mart_inspections",
+        "select permit_number from mart_inspections where current_setting('temp_directory') <> ''",
+        "select getenv('HOME') from mart_inspections",
+        "select \"GetEnv\"('HOME') from mart_inspections",
+        "select main.getenv('HOME') from mart_inspections",
+        "select list_transform([1], x -> getenv('HOME')) from mart_inspections",
+        "select getvariable('v') from mart_inspections",
+        "select which_secret('s3://b/k', 's3') from mart_inspections",
+        # duckdb_* / pragma_* introspection, scalar or table-valued, in any position.
+        "select duckdb_extensions() from mart_inspections",
+        "select pragma_version() from mart_inspections",
+        "select * from mart_inspections, duckdb_settings()",
+        "select permit_number from mart_inspections "
+        "where permit_number in (select name from pragma_database_list())",
+        # Catalog / session introspection.
+        "select version() from mart_inspections",
+        "select current_database() from mart_inspections",
+        "select current_schema() from mart_inspections",
+        "select current_schemas(true) from mart_inspections",
+        "select current_catalog from mart_inspections",
+        "select current_user from mart_inspections",
+        "select current_query() from mart_inspections",
+        # Running SQL text or globbing files from inside a query.
+        "select query('select 1') from mart_inspections",
+        "select glob('/etc/*') from mart_inspections",
+    ],
+)
+def test_rejects_settings_and_introspection_functions(config: TiresiasConfig, sql: str) -> None:
+    with pytest.raises(SqlGuardError, match="not allowed"):
+        guard_sql(sql, config)
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        # Ordinary functions, including date/time "current_*" ones, still pass.
+        "select permit_number, current_date as today from mart_inspections",
+        "select permit_number, now() as ts from mart_inspections",
+        "select upper(restaurant_name), round(failure_rate_pct, 1) from mart_inspections",
+        "select count(*) from mart_inspections where restaurant_name like '%pragma%'",
+    ],
+)
+def test_ordinary_functions_still_pass(config: TiresiasConfig, sql: str) -> None:
+    assert guard_sql(sql, config).tables == ("mart_inspections",)
