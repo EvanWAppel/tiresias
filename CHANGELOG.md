@@ -7,8 +7,10 @@ is only usable once its tag exists.
 
 ## [Unreleased]
 
-Not tagged yet. The `current_setting()` guard fix below needs a `v0.1.2` tag before the
-cities can pin it (see `BLOCKED.md`).
+## [0.1.2] - 2026-10-24
+
+Version bumped in `pyproject.toml` and `tiresias.__version__`. Not usable until Evan
+tags `v0.1.2` on the merge commit; then each city gets a pin-bump PR.
 
 ### Security
 - The SQL guard rejects settings, environment and introspection functions anywhere in
