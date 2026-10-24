@@ -6,15 +6,21 @@
 read-only query, runs it through a guarded MCP tool, cites its SQL, and abstains when it can't
 ground an answer. City apps install it and pin a tag: Elvis (live), plus robbins, gregan and groening (in flight).
 
-**Current state (main `bf17f9f`, 2026-10-22).**
+**Current state (main `1efa91d`, 2026-10-23).**
 - E0–E4 are done. `v0.1.0` is tagged and Elvis runs on it, with the live gold set at 36/36.
-- v0.1.1 is merged (`0ae9123`, `pyproject` 0.1.1). It holds the case-insensitive column docs, the
-  CTE-scope allowlist fix and the locked-down DuckDB. It is **not tagged yet**, and every city
-  still pins v0.1.0 (see BLOCKED.md).
-- E5 city PRs are merged (gregan#10 and groening#15 on 2026-10-08, robbins#23 on 2026-10-11; checked
-  read-only 2026-10-22). No open PRs in this repo.
-- Tests on main: `194 passed, 1 deselected` (the slow one) in about 3 min. ruff, ruff format and ty are clean.
-- The repo has no CLAUDE.md. The house rules below come from PRD.md, TASKS.md and DECISIONS.md.
+- `v0.1.1` is **tagged** on `0ae9123` (Evan, 2026-10-23). Pin-bump PRs from v0.1.0 to v0.1.1
+  were opened 2026-10-23 in gregan, groening, robbins and elvis (TASKS E5 `[~]`; merging is
+  Evan's); robbins' merged as robbins#28.
+- The weekend run (PR #8, merged 2026-10-23) did all five tasks from the 2026-10-22 primer
+  (see below). #10 then added `chat.show_rejections` (default `false`) so the public Trace
+  panel hides rejection text (Evan's call from blocker triage), and cleared the tag and
+  per-city key blockers. `main` now carries Unreleased changes (the `current_setting()` guard
+  fix `fd05cba` and the hidden rejection text) that wait on a `v0.1.2` tag (BLOCKED.md).
+- E5 city PRs are merged (gregan#10, groening#15, robbins#23). No open PRs in this repo.
+  CI on main green.
+- Tests on main (measured 2026-10-22, before #8 and #10): `194 passed, 1 deselected` (the slow
+  one) in about 3 min; ruff, ruff format and ty clean. Both PRs added tests, so re-measure.
+- The repo now has a `CLAUDE.md` (added in #8) with the house rules, test command and CLI.
 
 **Test command (every task):**
 ```
@@ -25,27 +31,17 @@ uv run pytest -q -m "not slow" && uv run ruff check tiresias tests \
 
 ### Autonomous tasks, in order
 
-Each task goes on its own feature branch off `origin/main`, ends in its own PR, and is never merged.
+All five tasks from the 2026-10-22 primer are done, merged in PR #8:
 
-1. **Close the LOW `current_setting()` finding** (`reviews/2026-10-05-city-adoption-security.md`,
-   last row). Write a failing test first in `tests/test_sql_guard.py`, then make
-   `tiresias/sql_guard.py` reject DuckDB settings and introspection functions (`current_setting`,
-   `getenv`, `duckdb_*`, `pragma_*`, etc.), keeping the existing P0.9 hostile-input cases.
-   *Done when* the new tests pass, the full suite is green, and the review row says "Fixed (vX)".
-2. **Add a repo `CLAUDE.md`** that writes down the house rules below, the test command and the
-   CLI. *Done when* the file exists and agrees with the README. This is docs only.
-3. **Add `CHANGELOG.md`** with release notes for v0.1.0 and v0.1.1, taken from TASKS.md, the reviews and
-   `git log`, so they're ready when Evan tags. *Done when* both versions list their changes and
-   security fixes, with commit SHAs.
-4. **Refresh the TASKS.md E5 ledger.** Read each city PR's state with `gh pr view` (read-only):
-   gregan#10, groening#15 and robbins#23 in `EvanWAppel/<city>`. Update the `[~]` lines to match. *Done
-   when* every E5 line matches GitHub. Never comment on, push to or merge those PRs.
-5. **Bedrock provider behind the shim** (TASKS P3.2). Add an `LLMProvider` implementation using
-   the Anthropic SDK's Bedrock client, unit-tested with a fake client, with **no live AWS call**. If
-   it needs a new dependency, put it in an optional extra (`tiresias[bedrock]`), and update
-   `uv.lock` with `uv lock`. Record the config shape in DECISIONS.md as "drafted by Claude,
-   awaiting Evan's confirmation". *Done when* the hermetic tests cover plan, abstain, refusal and
-   synthesize through the fake. Size M, so do it last.
+1. ~~Close the LOW `current_setting()` finding~~ (`fd05cba`, plus `c554490` pinning the
+   introspection rejections to the function-ban error).
+2. ~~Add a repo `CLAUDE.md`~~.
+3. ~~Add `CHANGELOG.md`~~ (v0.1.0 and v0.1.1; #10 added the Unreleased section).
+4. ~~Refresh the TASKS.md E5 ledger~~.
+5. ~~Bedrock provider behind the shim~~ (P3.2, `e57d8df`).
+
+No further autonomous tasks are queued in this primer. The next step, cutting v0.1.2, starts
+only when Evan says "cut v0.1.2" (BLOCKED.md); open items otherwise live in TASKS.md.
 
 ### House rules
 - **TDD.** Write the failing test first. Tests stay **hermetic**: the synthetic Testville city in
@@ -61,13 +57,15 @@ Each task goes on its own feature branch off `origin/main`, ends in its own PR, 
 - `main` is protected. Use feature branches and PRs, Python 3.12 and `uv`.
 
 ### Do NOT
-- **No deploys, merges, tags or releases.** Don't push the `v0.1.1` tag; it's Evan's (BLOCKED.md).
+- **No deploys, merges, tags or releases.** Don't push a `v0.1.2` tag; tagging is Evan's (BLOCKED.md).
   Don't touch Railway.
-- **Don't bump the city pins** in elvis, robbins, gregan or groening. That waits on the tag and
-  lives in other repos.
+- **Don't bump the city pins** in elvis, robbins, gregan or groening. The v0.1.1 bumps are already
+  open or merged, the next round waits on the v0.1.2 tag, and both live in other repos.
 - **Use no keys.** Don't run `tiresias eval` live or the live gold sets, and don't recalibrate
-  thresholds against live runs. Any public-page key work waits on the per-city key checklist in BLOCKED.md.
-- **Don't add `chat.show_rejections`** or change the Trace expander. That is Evan's decision (BLOCKED.md 🟡).
+  thresholds against live runs (the per-city key blockers were cleared in #10; TASKS.md keeps
+  live gold evals behind Evan's gold-set review).
+- **Don't change the Trace expander defaults.** `chat.show_rejections` (default `false`) records
+  Evan's call (#10, DECISIONS.md).
 - Skip the Phase 1 dbt/Snowflake items, the P3.2 per-domain metrics and cross-domain joins, and
   the P2.4 screencast. They are Elvis-side or manual.
 - No browser automation, and never read `.env` files. The repo has no git-crypt paths.
