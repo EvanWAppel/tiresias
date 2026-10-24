@@ -9,8 +9,8 @@ is only usable once its tag exists.
 
 ## [0.1.2] - 2026-10-24
 
-Version bumped in `pyproject.toml` and `tiresias.__version__`. Not usable until Evan
-tags `v0.1.2` on the merge commit; then each city gets a pin-bump PR.
+Merged as PR #12 and tagged `v0.1.2` on `6d5de45` (2026-10-24). The city pin bumps
+(elvis, gregan, groening, robbins) are open as one PR per city repo.
 
 ### Security
 - The SQL guard rejects settings, environment and introspection functions anywhere in
