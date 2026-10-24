@@ -81,9 +81,9 @@ City PR states checked read-only with `gh pr view` on 2026-10-22.
             SHAs), ready for the tag; `tests/test_changelog.py` keeps it in step
             with `__version__`.
       - [x] Tag `v0.1.1` on `0ae9123` (Evan, tagged and pushed 2026-10-23).
-      - [~] Bump the pins: gregan, groening, robbins **and elvis** from the v0.1.0
-            archive (`bbb34d6`) to v0.1.1; one pin-bump PR per city repo opened
-            2026-10-23 (merging is Evan's).
+      - [x] Bump the pins: gregan, groening, robbins **and elvis** from the v0.1.0
+            archive (`bbb34d6`) to v0.1.1; one pin-bump PR per city repo, all merged
+            2026-10-23 (elvis#35, gregan#14, groening#22, robbins#28).
 - [x] Dedicated Anthropic keys: gregan, groening, robbins and elvis each run on their
       own workspace with a scoped key and a $10 spend cap (Evan confirmed in blocker
       triage 2026-10-23). Robbins' old "user's own key" concern is closed by this.
@@ -92,9 +92,14 @@ City PR states checked read-only with `gh pr view` on 2026-10-22.
       `tiresias.chat.public_trace` redact guard/DuckDB error text in the Trace expander.
       Cities get it with the next tag; no city-side change needed unless a page wants
       the full text.
-- [ ] v0.1.2: the Unreleased `current_setting()`/introspection guard fix (`fd05cba`)
-      and the hidden rejection text need a `v0.1.2` tag (version bump + CHANGELOG date
-      in a PR, then Evan tags; see `BLOCKED.md`), then a second round of city pin bumps.
+- [~] v0.1.2: the `current_setting()`/introspection guard fix (`fd05cba`) and the
+      hidden rejection text.
+      - [x] Version bump + dated CHANGELOG (#12).
+      - [x] Tag `v0.1.2` on `6d5de45` (Evan, tagged and pushed 2026-10-24).
+      - [~] Bump the pins from v0.1.1 (`0ae9123`) to v0.1.2: one pin-bump PR per city
+            repo opened 2026-10-24 (elvis#38, gregan#16, groening#28, robbins#31);
+            merging is Evan's. Every city keeps `chat.show_rejections` at its default
+            (`false`), since all four pages are public.
 - [ ] Live gold evals per city now that keys exist; recalibrate after Evan reviews gold
       sets (runs need Evan's go-ahead, since they spend against the city keys).
 

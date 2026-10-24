@@ -1,3 +1,5 @@
 # BLOCKED — what I need from Evan
 
-- [ ] 🟡 **Tag `v0.1.2` for the `current_setting()` guard fix** (TASKS E5 v0.1.2) — `main` carries an Unreleased guard fix (`fd05cba`: rejects `current_setting`, `getenv`, introspection functions; closes the LOW finding in `reviews/2026-10-05-city-adoption-security.md`) plus the hidden-rejection trace panel, but no tag, so no city can pin it. Once this PR merges: approve the release by telling Claude "cut v0.1.2" (Claude bumps `pyproject.toml`/`__version__` and dates the CHANGELOG section in a PR), merge that PR, then run `git -C ~/Documents/portfolio/tiresias fetch origin && git -C ~/Documents/portfolio/tiresias tag -a v0.1.2 origin/main -m "v0.1.2: settings/introspection function ban, hidden rejection text" && git -C ~/Documents/portfolio/tiresias push origin v0.1.2`, and tell Claude "v0.1.2 tagged" for the city pin bumps.
+Nothing blocked right now.
+
+- [x] 🟡 **Tag `v0.1.2` for the `current_setting()` guard fix** (TASKS E5 v0.1.2) — done: Evan tagged `v0.1.2` on `6d5de45` (the merge of #12) on 2026-10-24. City pin-bump PRs are open: EvanWAppel/elvis#38, EvanWAppel/gregan#16, EvanWAppel/groening#28, EvanWAppel/robbins#31 (merging is Evan's; each merge deploys).
