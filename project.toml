@@ -38,3 +38,15 @@ spend_cap = "n/a"
 
 [platform]
 done = []
+
+[commands]
+setup = "uv sync --locked --all-extras"
+test = "uv run pytest -q -m 'not slow'"
+lint = "uv run ruff check tiresias tests && uv run ruff format --check tiresias tests && uv run ty check tiresias tests"
+
+[fleet]                     # joined 2026-11-01 (_system D-051); also has the `fleet` topic
+component = "tiresias"
+agents = ["claude", "codex"]
+default_model = "sonnet"
+default_branch = "main"
+max_minutes = 45
