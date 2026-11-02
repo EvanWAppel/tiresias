@@ -4,7 +4,7 @@
 > tickets (component `tiresias`; file with `uv run --project ~/Documents/_system sys file-blocker`);
 > `sys blockers` mirrors them into the todo dashboard. Two kinds stay here: `[sec]` blockers (the
 > security dashboard counts them only here) and anything Jira must not hold — rosters, secrets,
-> unpublished writing. Moved 2026-11-01: .
+> unpublished writing. Nothing open was moved (2026-11-01).
 
 Nothing blocked right now.
 
